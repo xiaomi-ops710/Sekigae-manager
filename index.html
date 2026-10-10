@@ -225,6 +225,38 @@ input[type=range]{width:100%;accent-color:var(--primary)}
 .spin{width:36px;height:36px;border-radius:50%;border:4px solid var(--outline-v);border-top-color:var(--primary);animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<style>
+.mem-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:1040px){.mem-layout{grid-template-columns:minmax(0,1fr)}}
+.addbar{display:flex;gap:12px;align-items:center;padding:12px;border-radius:16px;background:var(--surf);position:sticky;top:-8px;z-index:3}
+.addbar .nof{width:104px;flex:none}
+.addbar .field input{min-height:52px;font-size:17px}
+.btn.big{height:52px;padding:0 28px}
+.mlist{display:flex;flex-direction:column}
+.mrow{display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--outline-v);min-height:62px}
+.mrow:last-child{border-bottom:0}
+.mno{width:44px;height:44px;border-radius:12px;background:var(--primary-c);color:var(--on-primary-c);display:grid;place-items:center;font-weight:700;font-variant-numeric:tabular-nums}
+.mrow.absent .mno{background:var(--surf-highest);color:var(--on-surface-v)}
+.mrow.absent .nm{text-decoration:line-through;color:var(--on-surface-v)}
+.mname{background:none;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0;padding:6px 4px;border-radius:8px}
+.mname .nm{font-weight:500;font-size:16px}
+.mname .meta{display:flex;gap:4px;flex-wrap:wrap}
+.chip.att{height:40px;padding:0 16px;font-size:14px}
+.acc{padding:16px}
+.acc>summary.sum{list-style:none;display:flex;align-items:center;gap:8px;font:500 16px/24px var(--font);cursor:pointer;min-height:40px}
+.acc>summary.sum::-webkit-details-marker{display:none}
+.chev{margin-left:auto;transition:transform .2s}
+.acc[open]>summary .chev{transform:rotate(180deg)}
+.btn.wide{width:100%;justify-content:flex-start}
+.av{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.stb{position:absolute;right:-1px;bottom:-1px;font-size:15px!important;border-radius:50%;background:var(--surface);color:var(--primary)}
+.stb.err{color:var(--error)}.stb.ok{color:var(--ok)}
+@media (pointer:coarse){
+  .icon-btn{width:48px;height:48px}.chip{height:38px}.chip.tag{height:24px}.seg button{height:44px}.btn{height:44px}.btn.sm{height:38px}.btn.big{height:52px}
+  .field input,.field select{min-height:52px;font-size:16px}.nav .pill{height:36px}
+  .li,.rule{min-height:64px}
+}
+</style>
 </head><body>
 <div id="app">
   <header id="topbar">
@@ -258,7 +290,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-const ROLES = ['学級委員', '副学級委員', '班長', '書記', '会計', '保健'];
+const ROLES = ['学級委員', '班長', '書記', '会計', '保健'];
 const REL = {
   four: { label: '前後左右', fn: (dr, dc) => Math.abs(dr) + Math.abs(dc) === 1 },
   lr: { label: '左右(隣)', fn: (dr, dc) => dr === 0 && Math.abs(dc) === 1 },
@@ -299,7 +331,7 @@ function resizeLayout(L, rows, cols) {
 /* ----- sample data ----- */
 const SAMPLE_NAMES = [['青木', '男子'], ['伊藤', '女子'], ['上田', '男子'], ['遠藤', '女子'], ['大野', '男子'], ['加藤', '女子'], ['木村', '男子'], ['工藤', '女子'], ['小林', '男子'], ['斉藤', '女子'], ['佐藤', '女子'], ['清水', '男子'], ['鈴木', '男子'], ['高橋', '女子'], ['田中', '男子'], ['中村', '女子'], ['西田', '男子'], ['野口', '女子'], ['橋本', '男子'], ['林', '女子'], ['原田', '男子'], ['福田', '女子'], ['堀', '男子'], ['松本', '女子'], ['宮崎', '男子'], ['森', '女子'], ['山田', '男子'], ['吉田', '女子'], ['渡辺', '男子'], ['和田', '女子']];
 function sampleState() {
-  const members = SAMPLE_NAMES.map(([n, g]) => ({ id: uid(), name: n, tags: [g], absent: false }));
+  const members = SAMPLE_NAMES.map(([n, g], i) => ({ id: uid(), name: n, tags: [g], absent: false, no: i + 1 }));
   const byName = n => members.find(m => m.name === n);
   byName('上田').tags.push('視力'); byName('遠藤').tags.push('視力'); byName('小林').tags.push('班長'); byName('伊藤').tags.push('班長'); byName('青木').tags.push('学級委員'); byName('伊藤').tags.push('学級委員');
   const layout = makeLayout('aisle', 5, 8); layout.cells.forEach(c => { /* 5x8 with aisles => 30 seats */ });
@@ -608,7 +640,7 @@ function renderShuffle() {
       </div>
     </div>
     <div class="card"><h3><span class="ms">fact_check</span>条件チェック</h3><div id="checks"></div></div>
-    <div class="card stack" id="setCard"></div>
+    <details class="card acc" id="setCard"></details>
   </div>
   <button class="fab" id="fabShuffle"><span class="ms">shuffle</span>席替えを実行</button>`;
   $('#viewSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.v; save(); renderShuffle(); };
@@ -648,7 +680,7 @@ function renderChecks() {
 }
 function renderSettings() {
   const host = $('#setCard'); if (!host) return; const st = S.settings;
-  host.innerHTML = `<h3><span class="ms">tune</span>シャッフル設定</h3>
+  host.innerHTML = `<summary class="sum"><span class="ms">tune</span>シャッフル設定<span class="ms chev">expand_more</span></summary><div class="stack" style="margin-top:12px">
   <div><div class="lbl">発表の演出</div><div class="seg" id="animSeg">${[['none', '即表示', 'bolt'], ['roll', 'ルーレット', 'casino'], ['seq', '1人ずつ', 'timer'], ['tap', 'タップで公開', 'touch_app']].map(([v, l, ic]) => `<button data-a="${v}" class="${st.anim === v ? 'on' : ''}"><span class="ms sm">${ic}</span>${l}</button>`).join('')}</div></div>
   <label class="switch"><input type="checkbox" id="stSame" ${st.avoidSame ? 'checked' : ''}><span class="grow">直近と同じ席を避ける<div class="sub">過去 ${st.histN} 回分（履歴ベース）</div></span></label>
   <label class="switch"><input type="checkbox" id="stNb" ${st.avoidNb ? 'checked' : ''}><span class="grow">前回と同じ隣同士を避ける</span></label>
@@ -657,7 +689,7 @@ function renderSettings() {
   <div><div class="lbl">名前の文字サイズ: <b id="nsv">${st.nameSize}px</b></div><input type="range" id="stNs" min="10" max="28" value="${st.nameSize}"></div>
   <label class="switch"><input type="checkbox" id="stIgn" ${st.ignoreRules ? 'checked' : ''}><span class="grow">条件を無視して完全ランダムにする</span></label>
   <label class="switch"><input type="checkbox" id="stSnd" ${st.sound ? 'checked' : ''}><span class="grow">効果音を鳴らす</span></label>
-  <label class="field"><span>乱数シード（空欄で毎回ランダム）</span><input id="stSeed" value="${esc(st.seed)}" placeholder="例: 2学期1回目"></label>`;
+  <label class="field"><span>乱数シード（空欄で毎回ランダム）</span><input id="stSeed" value="${esc(st.seed)}" placeholder="例: 2学期1回目"></label></div>`;
   $('#animSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; st.anim = b.dataset.a; save(); renderSettings(); };
   const bind = (id, k, num) => { const i = $('#' + id); i.oninput = () => { st[k] = i.type === 'checkbox' ? i.checked : num ? +i.value : i.value; save(); if (id === 'stHistN') $('#histNv').textContent = st.histN; if (id === 'stNs') { $('#nsv').textContent = st.nameSize + 'px'; drawBoard(); } }; };
   bind('stSame', 'avoidSame'); bind('stNb', 'avoidNb'); bind('stFair', 'fair'); bind('stHistN', 'histN', 1); bind('stNs', 'nameSize', 1); bind('stSeed', 'seed'); bind('stIgn', 'ignoreRules'); bind('stSnd', 'sound');
@@ -676,65 +708,9 @@ document.addEventListener('fullscreenchange', () => { if (!document.fullscreenEl
 
 /* ===== Members page ===== */
 let memberFilter = '';
-function renderMembers() {
-  const el = $('#page-members'); const tags = allTags();
-  const pres = presentList().length;
-  const list = S.members.filter(m => !memberFilter || m.name.includes(memberFilter) || m.tags.some(t => t.includes(memberFilter)));
-  el.innerHTML = `
-  <div class="h-row"><h2>名前</h2><span class="sub">出席 <b class="kbd">${pres}</b> ／ 欠席 <b class="kbd">${S.members.length - pres}</b> ／ 全 <b class="kbd">${S.members.length}</b>名</span></div>
-  <div class="grid2">
-    <div class="stack">
-      <div class="card stack">
-        <h3><span class="ms">person_add</span>メンバーを追加</h3>
-        <form id="addForm" class="row" style="flex-wrap:nowrap"><label class="field grow"><span>名前（Enterで追加）</span><input id="addName" autocomplete="off" placeholder="例: 山本"></label><button class="btn filled" type="submit"><span class="ms">add</span>追加</button></form>
-        <div class="row"><button class="btn tonal" id="btnBulk"><span class="ms">playlist_add</span>まとめて追加</button><button class="btn text" id="btnAllPresent"><span class="ms">how_to_reg</span>全員出席にする</button><button class="btn text danger" id="btnClearAll"><span class="ms">delete_sweep</span>全員削除</button></div>
-      </div>
-      <div class="card stack" id="offCard"></div>
-      <div class="card stack"><h3><span class="ms">sell</span>タグ（グループ分け）</h3>
-        <div class="sub">「男子」「視力」「班長」など、条件の対象をまとめて指定するためのラベルです。各メンバーの編集で付けられます。</div>
-        <div class="chips">${tags.length ? tags.map(t => `<span class="chip tag" style="height:28px;font-size:12px">${esc(t)} ${S.members.filter(m => m.tags.includes(t)).length}名</span>`).join('') : '<span class="sub">タグはまだありません</span>'}</div>
-      </div>
-    </div>
-    <div class="card">
-      <label class="field" style="margin:8px 0 12px"><span>絞り込み</span><input id="memFilter" value="${esc(memberFilter)}" placeholder="名前・タグで検索"></label>
-      <div class="list" id="memList">${list.length ? list.map(m => `<div class="li ${m.absent ? 'absent' : ''}"><div class="avatar">${esc(m.name.slice(0, 1))}</div><div class="txt"><div class="nm">${esc(m.name)}${m.tags.includes('学級委員') ? ' <span class="ms sm fill" style="color:#e0a100;vertical-align:-3px">star</span>' : ''}</div><div class="meta">${m.tags.map(t => `<span class="chip tag">${esc(t)}</span>`).join('')}${m.absent ? '<span class="sub">欠席</span>' : ''}</div></div>
-        <button class="icon-btn" data-abs="${m.id}" title="${m.absent ? '出席にする' : '欠席にする'}"><span class="ms">${m.absent ? 'person_off' : 'how_to_reg'}</span></button>
-        <button class="icon-btn" data-edit="${m.id}" title="編集"><span class="ms">edit</span></button>
-        <button class="icon-btn" data-del="${m.id}" title="削除"><span class="ms">delete</span></button></div>`).join('') : `<div class="empty-state"><span class="ms">group_off</span><div>メンバーがいません</div></div>`}</div>
-    </div>
-  </div>`;
-  $('#addForm').onsubmit = e => { e.preventDefault(); const v = $('#addName').value.trim(); if (!v) return; S.members.push({ id: uid(), name: v, tags: [], absent: false }); S.sample = S.sample; save(); renderMembers(); $('#addName').focus(); };
-  $('#memFilter').oninput = e => { memberFilter = e.target.value; const pos = e.target.selectionStart; renderMembers(); const f = $('#memFilter'); f.focus(); f.setSelectionRange(pos, pos); };
-  $('#btnAllPresent').onclick = () => { S.members.forEach(m => m.absent = false); save(); renderMembers(); };
-  $('#btnClearAll').onclick = () => confirmDlg('全メンバーを削除します。条件に含まれる指定も外れます。よろしいですか？', '削除する', () => { S.members = []; S.rules.forEach(r => { ['A', 'B'].forEach(k => r[k] && (r[k].p = [])); }); S.result = null; save(); renderMembers(); });
-  $('#btnBulk').onclick = bulkDialog; renderOfficerCard();
-  $$('[data-abs]').forEach(b => b.onclick = () => { const m = memberById(b.dataset.abs); m.absent = !m.absent; save(); renderMembers(); });
-  $$('[data-edit]').forEach(b => b.onclick = () => editMember(b.dataset.edit));
-  $$('[data-del]').forEach(b => b.onclick = () => { const id = b.dataset.del; S.members = S.members.filter(m => m.id !== id); S.rules.forEach(r => ['A', 'B'].forEach(k => r[k] && (r[k].p = r[k].p.filter(x => x !== id)))); save(); renderMembers(); });
-}
-function bulkDialog() {
-  dialog({
-    title: 'まとめて追加', icon: 'playlist_add', body: `<div class="sub">1行に1人。「名前, タグ, タグ」の形式でタグも同時に付けられます。Excelや名簿からの貼り付けにも対応（タブ区切り可）。</div><div class="row"><label class="btn outlined sm" style="cursor:pointer"><span class="ms">upload_file</span>CSV/テキストを読み込む<input type="file" id="bulkFile" accept=".csv,.txt,text/plain,text/csv" hidden></label></div><label class="field"><span>名簿</span><textarea id="bulkTa" rows="9" placeholder="山本, 男子, 視力&#10;中島, 女子&#10;小川"></textarea></label>`,
-    actions: [{ label: 'キャンセル' }, {
-      label: '追加する', kind: 'filled', icon: 'add', onClick: el => {
-        const lines = $('#bulkTa', el).value.split(/\n/).map(l => l.trim()).filter(Boolean); if (!lines.length) return false;
-        lines.forEach(l => { const [n, ...t] = l.split(/[,，、\t]+/).map(x => x.trim()).filter(Boolean); if (n) S.members.push({ id: uid(), name: n, tags: [...new Set(t)], absent: false }); });
-        save(); renderMembers(); snack(`${lines.length}名を追加しました`);
-      }
-    }]
-  });
-}
-function editMember(id) {
-  const m = memberById(id);
-  dialog({
-    title: 'メンバーを編集', icon: 'edit', body: `<label class="field"><span>名前</span><input id="emName" value="${esc(m.name)}"></label>
-    <label class="field"><span>タグ（カンマ区切り）</span><input id="emTags" value="${esc(m.tags.join(', '))}" placeholder="男子, 視力, 班長"></label>
-    <div><div class="lbl">既存のタグから追加</div><div class="chips">${tagUniverse().map(t => `<button type="button" class="chip ${m.tags.includes(t) ? 'sel' : ''}" data-t="${esc(t)}">${esc(t)}</button>`).join('') || '<span class="sub">なし</span>'}</div></div>
-    <label class="switch"><input type="checkbox" id="emAbs" ${m.absent ? 'checked' : ''}><span>欠席（席替えの対象から外す）</span></label>`,
-    actions: [{ label: 'キャンセル' }, { label: '保存', kind: 'filled', onClick: el => { const n = $('#emName', el).value.trim(); if (!n) return false; m.name = n; m.tags = [...new Set($('#emTags', el).value.split(/[,，、]+/).map(x => x.trim()).filter(Boolean))]; m.absent = $('#emAbs', el).checked; save(); renderMembers(); } }]
-  });
-  $$('.chip[data-t]', $('#overlay')).forEach(c => c.onclick = () => { const inp = $('#emTags'); let ts = inp.value.split(/[,，、]+/).map(x => x.trim()).filter(Boolean); const t = c.dataset.t; ts = ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]; inp.value = ts.join(', '); c.classList.toggle('sel'); });
-}
+
+
+
 /* ===== Layout page ===== */
 let tool = 'seat', paintG = 1, painting = false;
 function layoutChanged(oldL) {
@@ -844,7 +820,7 @@ function renderRules() {
   <div class="h-row"><h2>条件</h2><span class="sub">必須の条件は必ず守り、「できれば」の条件はなるべく多く満たすよう最適化します。</span></div>
   <div class="row" style="margin-bottom:16px">
     <button class="btn filled" id="btnAddRule"><span class="ms">add</span>条件を追加</button>
-    <button class="btn tonal" id="btnAI" ${caps.sample ? '' : 'hidden'}><span class="ms">auto_awesome</span>文章でAIに追加</button>
+    <button class="btn tonal" id="btnAI"><span class="ms">auto_awesome</span>文章で条件を追加</button>
   </div>
   <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
     <div class="stack" id="ruleList"></div>
@@ -925,8 +901,8 @@ function drawBoard() {
     const cls = ['cell', 'seat']; if (!m) cls.push('empty'); if (locked) cls.push('lock'); if (sel === i) cls.push('pick'); if (m && bad.has(id) && !hd && !rl) cls.push('bad'); if (hd) cls.push('hidden'); if (rl) cls.push('roll');
     let name = m ? m.name : '空席'; if (rl) name = rollNames[Math.floor(Math.random() * rollNames.length)] || '';
     const show = m && !hd && !rl;
-    const star = show ? (m.tags.includes('学級委員') ? '<span class="ms star fill">star</span>' : m.tags.includes('副学級委員') ? '<span class="ms star">star</span>' : '') : '';
-    const tg = show ? m.tags.filter(t => t !== '学級委員' && t !== '副学級委員').slice(0, 2).join(' / ') : '';
+    const star = show && m.tags.includes('学級委員') ? '<span class="ms star fill">star</span>' : '';
+    const noS = m && m.no != null && m.no !== '' ? m.no + '番' : ''; const tg = show ? [noS, ...m.tags.filter(t => t !== '学級委員').slice(0, 2)].filter(Boolean).join(' ') : '';
     const dr = mode === 'swap' && m && !hd && !rl && !locked ? ' draggable="true"' : '';
     return `<div class="${cls.join(' ')}" data-i="${i}" data-g="${c.g}"${dr} style="--nfs:${S.settings.nameSize}px"><span class="no">${nums[i]}</span><span><span class="n">${esc(hd ? '？？？' : name)}</span><span class="tg">${esc(tg)}</span></span>${star}</div>`;
   }).join('');
@@ -1032,21 +1008,20 @@ function candidatesDialog() {
 function renderOfficerCard() {
   const host = $('#offCard'); if (!host) return;
   S.off = S.off || { n: 1, mode: 'any', tags: [], excl: true, deputy: false }; S.officerHist = S.officerHist || [];
-  const o = S.off, offs = S.members.filter(m => m.tags.includes('学級委員')), deps = S.members.filter(m => m.tags.includes('副学級委員'));
+  const o = S.off, offs = S.members.filter(m => m.tags.includes('学級委員'));
   const gt = allTags().filter(t => !ROLES.includes(t));
-  host.innerHTML = `<h3><span class="ms fill" style="color:#e0a100">star</span>学級委員を決める</h3>
-  <div class="chips">${offs.map(m => `<span class="chip sel">${esc(m.name)}</span>`).join('') || '<span class="sub">学級委員は未設定です</span>'}${deps.map(m => `<span class="chip">副: ${esc(m.name)}</span>`).join('')}</div>
+  host.innerHTML = `<summary class="sum"><span class="ms fill" style="color:#e0a100">star</span>学級委員を決める<span class="ms chev">expand_more</span></summary><div class="stack" style="margin-top:12px">
+  <div class="chips">${offs.map(m => `<span class="chip sel">${esc(m.name)}</span>`).join('') || '<span class="sub">学級委員は未設定です</span>'}</div>
   <div class="row"><label class="field" style="width:96px"><span>人数</span><input type="number" id="ofN" min="1" max="8" value="${o.n}"></label>
   <div class="seg" id="ofMode"><button data-v="any" class="${o.mode === 'any' ? 'on' : ''}">全員から</button><button data-v="tag" class="${o.mode === 'tag' ? 'on' : ''}">タグごとに</button></div></div>
   ${o.mode === 'tag' ? `<div><div class="lbl">各タグから${o.n}名ずつ選びます</div><div class="chips">${gt.map(t => `<button class="chip ${o.tags.includes(t) ? 'sel' : ''}" data-ot="${esc(t)}">${esc(t)}</button>`).join('') || '<span class="sub">タグがありません</span>'}</div></div>` : ''}
   <label class="switch"><input type="checkbox" id="ofEx" ${o.excl ? 'checked' : ''}><span class="grow">過去に務めた人を除く<div class="sub">経験者 ${S.officerHist.length}名</div></span></label>
-  <label class="switch"><input type="checkbox" id="ofDep" ${o.deputy ? 'checked' : ''}><span>副学級委員も選ぶ</span></label>
-  <div class="row"><button class="btn filled" id="ofGo"><span class="ms">casino</span>抽選する</button><button class="btn text" id="ofClr">役職を解除</button><button class="btn text" id="ofHist" ${S.officerHist.length ? '' : 'disabled'}>経験者をリセット</button></div>`;
+  <div class="row"><button class="btn filled" id="ofGo"><span class="ms">casino</span>抽選する</button><button class="btn text" id="ofClr">役職を解除</button><button class="btn text" id="ofHist" ${S.officerHist.length ? '' : 'disabled'}>経験者をリセット</button></div></div>`;
   $('#ofN').onchange = e => { o.n = clamp(+e.target.value || 1, 1, 8); save(); renderOfficerCard(); };
   $('#ofMode').onclick = e => { const b = e.target.closest('button'); if (b) { o.mode = b.dataset.v; save(); renderOfficerCard(); } };
   $$('[data-ot]', host).forEach(b => b.onclick = () => { const t = b.dataset.ot; o.tags = o.tags.includes(t) ? o.tags.filter(x => x !== t) : [...o.tags, t]; save(); renderOfficerCard(); });
-  $('#ofEx').onchange = e => { o.excl = e.target.checked; save(); }; $('#ofDep').onchange = e => { o.deputy = e.target.checked; save(); };
-  $('#ofClr').onclick = () => { S.members.forEach(m => m.tags = m.tags.filter(t => t !== '学級委員' && t !== '副学級委員')); save(); renderMembers(); };
+  $('#ofEx').onchange = e => { o.excl = e.target.checked; save(); };
+  $('#ofClr').onclick = () => { S.members.forEach(m => m.tags = m.tags.filter(t => t !== '学級委員')); save(); renderMembers(); };
   $('#ofHist').onclick = () => { S.officerHist = []; save(); renderOfficerCard(); };
   $('#ofGo').onclick = officerDraw;
 }
@@ -1056,7 +1031,7 @@ function pickOfficers() {
   const pick = (l, n) => { const ord = o.excl ? [...sh(l.filter(m => !hist.has(m.id))), ...sh(l.filter(m => hist.has(m.id)))] : sh(l); return ord.slice(0, n); };
   const groups = o.mode === 'tag' && o.tags.length ? o.tags.map(t => pool.filter(m => m.tags.includes(t))) : [pool];
   const chosen = []; groups.forEach(g => chosen.push(...pick(g.filter(m => !chosen.includes(m)), o.n)));
-  const dep = []; if (o.deputy) groups.forEach(g => dep.push(...pick(g.filter(m => !chosen.includes(m) && !dep.includes(m)), o.n)));
+  const dep = [];
   return { chosen, dep };
 }
 function officerDraw() {
@@ -1065,15 +1040,15 @@ function officerDraw() {
   const run = el => {
     clearInterval(tm); const box = $('#offRoll', el), names = presentList().map(m => m.name); cur = pickOfficers(); let t = 0;
     $('#offOk', el) && ($('#offOk', el).disabled = true);
-    tm = setInterval(() => { t += 70; box.innerHTML = `<span class="ms" style="font-size:40px;color:#e0a100">casino</span><div>${esc(names[Math.floor(Math.random() * names.length)])}</div>`; beep(300 + Math.random() * 400, .03, 'square', .02); if (t >= 1400) { clearInterval(tm); box.innerHTML = `<div class="chips" style="justify-content:center">${cur.chosen.map(m => `<span class="chip sel" style="height:48px;font-size:22px"><span class="ms fill" style="color:#e0a100">star</span>${esc(m.name)}</span>`).join('')}</div>${cur.dep.length ? `<div class="sub" style="margin-top:8px">副学級委員</div><div class="chips" style="justify-content:center">${cur.dep.map(m => `<span class="chip" style="height:40px;font-size:18px">${esc(m.name)}</span>`).join('')}</div>` : ''}`; [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, .15, 'triangle', .06), n * 120)); const ok = $('#offOk', el); if (ok) ok.disabled = false; } }, 70);
+    tm = setInterval(() => { t += 70; box.innerHTML = `<span class="ms" style="font-size:40px;color:#e0a100">casino</span><div>${esc(names[Math.floor(Math.random() * names.length)])}</div>`; beep(300 + Math.random() * 400, .03, 'square', .02); if (t >= 1400) { clearInterval(tm); box.innerHTML = `<div class="chips" style="justify-content:center">${cur.chosen.map(m => `<span class="chip sel" style="height:48px;font-size:22px"><span class="ms fill" style="color:#e0a100">star</span>${esc(m.name)}</span>`).join('')}</div>`; [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, .15, 'triangle', .06), n * 120)); const ok = $('#offOk', el); if (ok) ok.disabled = false; } }, 70);
   };
   const d = dialog({
     title: '学級委員の抽選', icon: 'star', body: '<div id="offRoll" style="text-align:center;font-size:30px;font-weight:700;min-height:130px;display:grid;place-items:center;gap:8px"></div>',
     actions: [{ label: 'キャンセル', onClick: () => { clearInterval(tm); } }, { label: 'もう一度', kind: 'outlined', icon: 'replay', onClick: () => { run(d.el); return false; } }, {
       label: 'この結果に決定', kind: 'filled', icon: 'check', onClick: () => {
         clearInterval(tm); if (!cur) return false;
-        S.members.forEach(m => m.tags = m.tags.filter(t => t !== '学級委員' && t !== '副学級委員'));
-        cur.chosen.forEach(m => m.tags.push('学級委員')); cur.dep.forEach(m => m.tags.push('副学級委員'));
+        S.members.forEach(m => m.tags = m.tags.filter(t => t !== '学級委員'));
+        cur.chosen.forEach(m => m.tags.push('学級委員'));
         S.officerHist = [...new Set([...S.officerHist, ...cur.chosen.map(m => m.id)])]; save(); renderMembers(); snack('学級委員を設定しました');
       }
     }]
@@ -1083,11 +1058,11 @@ function officerDraw() {
 
 /* ----- image / print ----- */
 const G_HEX = ['#e3e9ea', '#ffd9de', '#ffdcc2', '#f5e29a', '#c4ecb4', '#b1ecdc', '#bde2ff', '#dcd2ff', '#f6d0ee'];
-let picOpt = { title: '席替え結果', date: true, nums: true, tags: false, star: true, cw: 112, orient: 'landscape' };
+let picOpt = { title: '席替え結果', date: true, nums: true, tags: false, star: true, no: true, cw: 112, orient: 'landscape' };
 function rr(x, a, b, w, h, r, f) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, w, h, r); else x.rect(a, b, w, h); x.fillStyle = f; x.fill(); }
 function buildCanvas(o) {
   const L = S.layout, res = S.result, cols = L.cols, rows = L.rows, nums = seatNumbers(), order = viewOrder();
-  const cw = o.cw, ch = o.tags ? 70 : 60, gap = 8, pad = 28, head = 62, tb = L.teacher ? 44 : 0, tg = L.teacher ? 14 : 0;
+  const cw = o.cw, ch = (o.tags || o.no) ? 70 : 60, gap = 8, pad = 28, head = 62, tb = L.teacher ? 44 : 0, tg = L.teacher ? 14 : 0;
   const W = pad * 2 + cols * cw + (cols - 1) * gap, H = pad * 2 + head + rows * ch + (rows - 1) * gap + tb + tg;
   const sc = o.scale || 2, cv = document.createElement('canvas'); cv.width = W * sc; cv.height = H * sc;
   const x = cv.getContext('2d'); x.scale(sc, sc);
@@ -1103,11 +1078,12 @@ function buildCanvas(o) {
     rr(x, px, py, cw, ch, 12, G_HEX[c.g] || G_HEX[0]);
     const id = res && res.assign[idx], m = id ? memberById(id) : null;
     if (o.nums) { x.fillStyle = '#6f797a'; x.font = `400 10px ${FF}`; x.fillText(String(nums[idx]), px + 7, py + 14); }
+    const line2 = m ? [o.no && m.no != null && m.no !== '' ? m.no + '番' : '', o.tags ? m.tags.filter(t => t !== '学級委員').slice(0, 2).join(' / ') : ''].filter(Boolean).join('  ') : '';
     const nm = m ? m.name : '空席'; let fs = 22; x.font = `700 ${fs}px ${FF}`; while (x.measureText(nm).width > cw - 16 && fs > 9) { fs--; x.font = `700 ${fs}px ${FF}`; }
-    x.fillStyle = m ? '#171d1e' : '#9aa3a5'; x.textAlign = 'center'; x.fillText(nm, px + cw / 2, py + (o.tags ? ch / 2 : ch / 2 + 8));
-    if (o.tags && m) { x.font = `400 11px ${FF}`; x.fillStyle = '#3f484a'; x.fillText(m.tags.filter(t => t !== '学級委員' && t !== '副学級委員').slice(0, 2).join(' / '), px + cw / 2, py + ch - 12); }
+    x.fillStyle = m ? '#171d1e' : '#9aa3a5'; x.textAlign = 'center'; x.fillText(nm, px + cw / 2, py + (line2 ? ch / 2 : ch / 2 + 8));
+    if (line2) { x.font = `400 11px ${FF}`; x.fillStyle = '#3f484a'; x.fillText(line2, px + cw / 2, py + ch - 12); }
     x.textAlign = 'left';
-    if (o.star && m && (m.tags.includes('学級委員') || m.tags.includes('副学級委員'))) { x.font = `400 16px ${FF}`; x.fillStyle = '#e0a100'; x.textAlign = 'right'; x.fillText(m.tags.includes('学級委員') ? '★' : '☆', px + cw - 6, py + 17); x.textAlign = 'left'; }
+    if (o.star && m && m.tags.includes('学級委員')) { x.font = `400 16px ${FF}`; x.fillStyle = '#e0a100'; x.textAlign = 'right'; x.fillText('★', px + cw - 6, py + 17); x.textAlign = 'left'; }
   });
   if (L.teacher && S.view === 'student') teacher(y + rows * ch + (rows - 1) * gap + tg);
   return cv;
@@ -1121,7 +1097,7 @@ function pictureDialog() {
     <div class="row"><label class="field grow" style="min-width:200px"><span>タイトル</span><input id="pvTitle" value="${esc(o.title)}"></label>
     <div class="seg" id="pvSize"><button data-v="112" class="${o.cw === 112 ? 'on' : ''}">標準</button><button data-v="150" class="${o.cw === 150 ? 'on' : ''}">大きめ</button></div>
     <div class="seg" id="pvOr"><button data-v="landscape" class="${o.orient === 'landscape' ? 'on' : ''}">A4 横</button><button data-v="portrait" class="${o.orient === 'portrait' ? 'on' : ''}">A4 縦</button></div></div>
-    <div class="row">${[['date', '日付'], ['nums', '席番号'], ['tags', 'タグ'], ['star', '学級委員マーク']].map(([k, l]) => `<label class="chip ${o[k] ? 'sel' : ''}" style="cursor:pointer"><input type="checkbox" data-pk="${k}" ${o[k] ? 'checked' : ''} hidden>${l}</label>`).join('')}</div>`,
+    <div class="row">${[['date', '日付'], ['nums', '席番号'], ['no', '出席番号'], ['tags', 'タグ'], ['star', '学級委員マーク']].map(([k, l]) => `<label class="chip ${o[k] ? 'sel' : ''}" style="cursor:pointer"><input type="checkbox" data-pk="${k}" ${o[k] ? 'checked' : ''} hidden>${l}</label>`).join('')}</div>`,
     actions: [{ label: '閉じる' }, { label: 'クリップボードにコピー', icon: 'content_copy', kind: 'outlined', onClick: () => { copyImage(); return false; } }, { label: '印刷', icon: 'print', kind: 'tonal', onClick: () => { doPrint(); return false; } }, { label: 'PNGを保存', icon: 'download', kind: 'filled', onClick: () => { saveImage(); return false; } }]
   });
   const draw = () => { const cv = buildCanvas({ ...o, scale: 1.5 }); cv.className = 'pv'; cv.style.width = cv.width / 1.5 + 'px'; $('#pvHost', d.el).replaceChildren(cv); };
@@ -1169,7 +1145,134 @@ function initExtras() {
     if (e.target.id !== 'bulkFile' || !e.target.files[0]) return; const fr = new FileReader();
     fr.onload = () => { const ta = $('#bulkTa'); if (ta) ta.value = (ta.value ? ta.value + '\n' : '') + String(fr.result).replace(/\r/g, ''); }; fr.readAsText(e.target.files[0]);
   });
+  S.members.forEach(m => { m.tags = m.tags.filter(t => t !== '副学級委員'); }); if (S.off) S.off.deputy = false;
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.claude) navigator.serviceWorker.register('./sw.js').catch(() => { });
+}
+
+/* ===== Members page (tablet-first layout) ===== */
+const noOf = m => (m.no != null && m.no !== '' ? m.no : '');
+const nextNo = () => { const ns = S.members.map(m => +m.no).filter(n => n > 0); return ns.length ? Math.max(...ns) + 1 : 1; };
+const byNo = (a, b) => (noOf(a) === '' ? 1e9 : +noOf(a)) - (noOf(b) === '' ? 1e9 : +noOf(b));
+function parseLine(l) {
+  const t = l.split(/[,，、\t]+/).map(x => x.trim()).filter(Boolean); let no = null;
+  if (t.length > 1 && /^\d+$/.test(t[0])) no = +t.shift();
+  else if (t.length) { const m = t[0].match(/^(\d+)[\s　]+(.+)$/); if (m) { no = +m[1]; t[0] = m[2]; } }
+  return t.length ? { id: uid(), name: t[0], tags: [...new Set(t.slice(1))], absent: false, no } : null;
+}
+function renderMembers() {
+  const el = $('#page-members'); const pres = presentList().length, q = memberFilter.trim(), tags = allTags();
+  const list = S.members.filter(m => !q || m.name.includes(q) || String(noOf(m)).includes(q) || m.tags.some(t => t.includes(q)));
+  el.innerHTML = `
+  <div class="h-row"><h2>名前</h2><span class="sub">出席 <b class="kbd">${pres}</b> ／ 欠席 <b class="kbd">${S.members.length - pres}</b> ／ 全 <b class="kbd">${S.members.length}</b>名</span><span class="grow"></span>
+    <button class="btn tonal" id="btnBulk"><span class="ms">playlist_add</span>まとめて追加</button><button class="btn outlined" id="btnMore"><span class="ms">tune</span>一括操作</button></div>
+  <div class="mem-layout"><div class="stack" style="min-width:0">
+    <form id="addForm" class="addbar"><label class="field nof"><span>出席番号</span><input id="addNo" inputmode="numeric" value="${nextNo()}"></label><label class="field grow"><span>名前（入力して Enter で追加）</span><input id="addName" autocomplete="off" enterkeyhint="done" placeholder="例: 山本"></label><button class="btn filled big" type="submit"><span class="ms">add</span>追加</button></form>
+    <div class="card" style="padding:12px"><label class="field" style="margin:6px 0 10px"><span>絞り込み（名前・番号・タグ）</span><input id="memFilter" value="${esc(memberFilter)}"></label>
+      <div class="mlist">${list.length ? list.map(m => `<div class="mrow ${m.absent ? 'absent' : ''}"><div class="mno">${noOf(m) === '' ? '–' : esc(String(noOf(m)))}</div>
+        <button class="mname" data-edit="${m.id}" title="編集"><span class="nm">${esc(m.name)}${m.tags.includes('学級委員') ? ' <span class="ms sm fill" style="color:#e0a100;vertical-align:-3px">star</span>' : ''}</span>${m.tags.length ? `<span class="meta">${m.tags.filter(t => t !== '学級委員').map(t => `<span class="chip tag">${esc(t)}</span>`).join('')}</span>` : ''}</button>
+        <button class="chip att ${m.absent ? '' : 'sel'}" data-abs="${m.id}">${m.absent ? '欠席' : '出席'}</button><button class="icon-btn" data-del="${m.id}" title="削除"><span class="ms">delete</span></button></div>`).join('') : `<div class="empty-state"><span class="ms">group_off</span><div>${S.members.length ? '該当するメンバーがいません' : '上の入力欄から名前を追加してください'}</div></div>`}</div></div>
+  </div>
+  <div class="stack"><details class="card acc" id="offCard" open></details>
+    <details class="card acc"><summary class="sum"><span class="ms">sell</span>タグ<span class="ms chev">expand_more</span></summary><div class="stack" style="margin-top:12px"><div class="sub">「男子」「視力」「班長」などのラベルです。条件の対象をまとめて指定できます。名前の行をタップして付けます。</div><div class="chips">${tags.filter(t => !ROLES.includes(t) || t === '班長').length ? tags.filter(t => t !== '学級委員').map(t => `<span class="chip tag" style="height:30px;font-size:12px">${esc(t)} ${S.members.filter(m => m.tags.includes(t)).length}名</span>`).join('') : '<span class="sub">タグはまだありません</span>'}</div></div></details>
+  </div></div>`;
+  $('#addForm').onsubmit = e => {
+    e.preventDefault(); let n = $('#addName').value.trim(), no = $('#addNo').value.trim(); if (!n) return;
+    const m = n.match(/^(\d+)[\s　]+(.+)$/); if (m) { no = m[1]; n = m[2]; }
+    S.members.push({ id: uid(), name: n, tags: [], absent: false, no: /^\d+$/.test(no) ? +no : null }); save(); renderMembers(); $('#addName').focus();
+  };
+  $('#memFilter').oninput = e => { memberFilter = e.target.value; const pos = e.target.selectionStart; renderMembers(); const f = $('#memFilter'); f.focus(); f.setSelectionRange(pos, pos); };
+  $('#btnBulk').onclick = bulkDialog; $('#btnMore').onclick = moreDialog; renderOfficerCard();
+  $$('[data-abs]').forEach(b => b.onclick = () => { const m = memberById(b.dataset.abs); m.absent = !m.absent; save(); renderMembers(); });
+  $$('[data-edit]').forEach(b => b.onclick = () => editMember(b.dataset.edit));
+  $$('[data-del]').forEach(b => b.onclick = () => { const id = b.dataset.del; S.members = S.members.filter(m => m.id !== id); S.rules.forEach(r => ['A', 'B'].forEach(k => r[k] && (r[k].p = r[k].p.filter(x => x !== id)))); save(); renderMembers(); });
+}
+function moreDialog() {
+  const d = dialog({
+    title: '一括操作', icon: 'tune', body: `<div class="stack" style="gap:8px">${[['present', 'how_to_reg', '全員を出席にする'], ['renum', 'pin', '出席番号を今の並び順で1から振り直す'], ['sort', 'sort', '出席番号の順に並べ替える'], ['clearno', 'backspace', '出席番号をすべて消す'], ['del', 'delete_sweep', '全員を削除する']].map(([k, i, l]) => `<button class="btn ${k === 'del' ? 'outlined danger' : 'tonal'} wide" data-k="${k}"><span class="ms">${i}</span>${l}</button>`).join('')}</div>`,
+    actions: [{ label: '閉じる' }]
+  });
+  $$('[data-k]', d.el).forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    if (k === 'del') { d.close(); confirmDlg('全メンバーを削除します。条件に含まれる指定も外れます。よろしいですか？', '削除する', () => { S.members = []; S.rules.forEach(r => ['A', 'B'].forEach(x => r[x] && (r[x].p = []))); S.result = null; save(); renderMembers(); }); return; }
+    if (k === 'present') S.members.forEach(m => m.absent = false);
+    if (k === 'renum') S.members.forEach((m, i) => m.no = i + 1);
+    if (k === 'sort') S.members.sort(byNo);
+    if (k === 'clearno') S.members.forEach(m => m.no = null);
+    save(); renderMembers(); d.close(); snack('実行しました');
+  });
+}
+function bulkDialog() {
+  dialog({
+    title: 'まとめて追加', icon: 'playlist_add', body: `<div class="sub">1行に1人。「出席番号, 名前, タグ」または「名前, タグ」。Excelや名簿からの貼り付け（タブ区切り）にも対応します。</div>
+    <div class="row"><label class="btn outlined sm" style="cursor:pointer"><span class="ms">upload_file</span>CSV/テキストを読み込む<input type="file" id="bulkFile" accept=".csv,.txt,text/plain,text/csv" hidden></label></div>
+    <label class="field"><span>名簿</span><textarea id="bulkTa" rows="9" placeholder="1, 山本, 男子, 視力&#10;2, 中島, 女子&#10;3, 小川"></textarea></label>`,
+    actions: [{ label: 'キャンセル' }, {
+      label: '追加する', kind: 'filled', icon: 'add', onClick: el => {
+        const ms = $('#bulkTa', el).value.split(/\n/).map(l => l.trim()).filter(Boolean).map(parseLine).filter(Boolean); if (!ms.length) return false;
+        const hasNo = S.members.length ? 0 : 1; let n = nextNo(); ms.forEach(m => { if (m.no == null) m.no = n; n = Math.max(n, (+m.no || 0)) + 1; });
+        S.members.push(...ms); save(); renderMembers(); snack(`${ms.length}名を追加しました`);
+      }
+    }]
+  });
+}
+function editMember(id) {
+  const m = memberById(id);
+  dialog({
+    title: 'メンバーを編集', icon: 'edit', body: `<div class="row" style="flex-wrap:nowrap"><label class="field" style="width:120px;flex:none"><span>出席番号</span><input id="emNo" inputmode="numeric" value="${esc(String(noOf(m)))}"></label><label class="field grow"><span>名前</span><input id="emName" value="${esc(m.name)}"></label></div>
+    <label class="field"><span>タグ（カンマ区切り）</span><input id="emTags" value="${esc(m.tags.join(', '))}" placeholder="男子, 視力, 班長"></label>
+    <div><div class="lbl">タップでタグを付け外し</div><div class="chips">${tagUniverse().map(t => `<button type="button" class="chip ${m.tags.includes(t) ? 'sel' : ''}" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
+    <label class="switch"><input type="checkbox" id="emAbs" ${m.absent ? 'checked' : ''}><span>欠席（席替えの対象から外す）</span></label>`,
+    actions: [{ label: 'キャンセル' }, { label: '保存', kind: 'filled', onClick: el => { const n = $('#emName', el).value.trim(); if (!n) return false; m.name = n; const no = $('#emNo', el).value.trim(); m.no = /^\d+$/.test(no) ? +no : null; m.tags = [...new Set($('#emTags', el).value.split(/[,，、]+/).map(x => x.trim()).filter(Boolean))]; m.absent = $('#emAbs', el).checked; save(); renderMembers(); } }]
+  });
+  $$('.chip[data-t]', $('#overlay')).forEach(c => c.onclick = () => { const inp = $('#emTags'); let ts = inp.value.split(/[,，、]+/).map(x => x.trim()).filter(Boolean); const t = c.dataset.t; ts = ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]; inp.value = ts.join(', '); c.classList.toggle('sel'); });
+}
+
+/* ===== Sentence → rules (offline parser; used when AI is unavailable) ===== */
+function parseLocal(text) {
+  const out = []; out.warn = [];
+  const sents = text.split(/[\n。！!]+/).map(s => s.replace(/^[・\-*\d.)）\s　]+/, '').trim()).filter(Boolean);
+  const names = S.members.map(m => m.name).sort((a, b) => b.length - a.length), tags = tagUniverse().sort((a, b) => b.length - a.length);
+  const kn = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  const num = (str) => { const m = str && str.match(/(\d+|[一二三四五六七八九])/); return m ? (kn[m[1]] || +m[1]) : null; };
+  sents.forEach(s => {
+    const used = new Array(s.length).fill(false), subs = [];
+    const find = (w, kind) => { let i = -1; while ((i = s.indexOf(w, i + 1)) >= 0) { if (used.slice(i, i + w.length).some(Boolean)) continue; for (let k = i; k < i + w.length; k++) used[k] = true; subs.push({ w, kind, pos: i, end: i + w.length }); } };
+    names.forEach(n => find(n, 'n')); tags.forEach(t => find(t, 't')); subs.sort((a, b) => a.pos - b.pos);
+    const groups = [];
+    subs.forEach(x => { const last = groups[groups.length - 1]; if (last && /^(と|や|、|・|,|および)?$/.test(s.slice(last.end, x.pos))) { last.items.push(x); last.end = x.end; return; } groups.push({ items: [x], pos: x.pos, end: x.end }); });
+    const sel = g => ({ names: g.items.filter(i => i.kind === 'n').map(i => i.w), tags: g.items.filter(i => i.kind === 't').map(i => i.w) });
+    const soft = /できれば|なるべく|可能なら|可能であれば|できるだけ|ほしい.*できれば/.test(s);
+    const base = { hard: !soft, w: soft ? 6 : 5 };
+    const G1 = groups[0], G2 = groups[1]; const r = o => out.push({ ...base, ...o });
+    if (!G1) { out.warn.push(s); return; }
+    let m;
+    if (/固定/.test(s) && (m = s.match(/(\d+)番|[Nn][Oo]\.?\s*(\d+)|席\s*(\d+)/))) { r({ type: 'fix', A: sel(G1), seatNumber: +(m[1] || m[2] || m[3]), hard: true }); return; }
+    if (/(隣|となり|隣り合わ|前後左右|近く|周り|そば|横)/.test(s) && /(しない|させない|避け|ならない|NG|ダメ|だめ|やめ|離)/.test(s)) {
+      const rel = /斜め|周り|8/.test(s) ? 'eight' : /前後左右|近く/.test(s) ? 'four' : /前後/.test(s) ? 'fb' : 'lr';
+      r({ type: 'apart', A: sel(G1), B: G2 ? sel(G2) : undefined, rel }); return;
+    }
+    if (/離/.test(s)) { const n = num((s.match(/([\d一二三四五六七八九]+)\s*(マス|席|つ|個)/) || [])[1]) || 2; r({ type: 'dist', A: sel(G1), B: G2 ? sel(G2) : undefined, op: /以内|以下/.test(s) ? 'max' : 'min', n, metric: 'man' }); return; }
+    if (/同じ班/.test(s)) { r({ type: 'group', kind: 'same', A: sel(G1), B: G2 ? sel(G2) : undefined }); return; }
+    if (/別の?班|違う班|異なる班/.test(s)) { r({ type: 'group', kind: 'diff', A: sel(G1), B: G2 ? sel(G2) : undefined }); return; }
+    if ((m = s.match(/(同じ|別の?|違う)(列|行)/))) { r({ type: 'line', kind: (m[1] === '同じ' ? 'same' : 'diff') + (m[2] === '列' ? 'Col' : 'Row'), A: sel(G1), B: G2 ? sel(G2) : undefined }); return; }
+    if (/列|最前|一番前|一番後ろ|最後|端|中央|真ん中|前半|後半|前の方|後ろの方|前方|後方/.test(s) && !/の(真)?(後ろ|前|左|右)(隣)?に/.test(s)) {
+      let area = null;
+      if (/最前|一番前/.test(s)) area = 'front1'; else if (/最後列|一番後ろ|最後尾/.test(s)) area = 'back1';
+      else if ((m = s.match(/前(?:の)?\s*([\d一二三])\s*列/))) area = 'front' + Math.min(3, num(m[1])); else if ((m = s.match(/後ろ(?:の)?\s*([\d一二三])\s*列/))) area = 'back' + Math.min(3, num(m[1]));
+      else if (/前半/.test(s)) area = 'frontHalf'; else if (/後半/.test(s)) area = 'backHalf';
+      else if (/前列|前の方|前方/.test(s)) area = 'front2'; else if (/後列|後ろの方|後方/.test(s)) area = 'back2';
+      else if (/左端/.test(s)) area = 'left1'; else if (/右端/.test(s)) area = 'right1'; else if (/中央|真ん中/.test(s)) area = 'centerCol';
+      if (area) { r({ type: 'area', A: sel(G1), area, mode: /座らない|避け|ならない|NG|禁止|以外/.test(s) ? 'out' : 'in' }); return; }
+    }
+    if (G2 && (m = s.match(/(後ろ|うしろ|後|前|左|右)/)) && /の(真)?(後ろ|うしろ|後|前|左|右)/.test(s)) {
+      const rel = { 後ろ: 'back', うしろ: 'back', 後: 'back', 前: 'front', 左: 'left', 右: 'right' }[m[1]]; const ri = s.indexOf(m[1]);
+      const [A, B] = G2.pos > ri ? [G2, G1] : [G1, G2]; r({ type: 'near', A: sel(A), B: sel(B), rel }); return;
+    }
+    if (G2 && /(隣|となり|前後左右|周り|近く|そば|横|斜め)/.test(s)) { r({ type: 'near', A: sel(G1), B: sel(G2), rel: /周り|斜め/.test(s) ? 'eight' : /前後左右|近く|そば/.test(s) ? 'four' : 'lr' }); return; }
+    if (/分散|ばらけ|バラバラ|均等|散らし/.test(s)) { r({ type: 'spread', A: sel(G1), by: /行/.test(s) ? 'row' : /列/.test(s) ? 'col' : 'group' }); return; }
+    out.warn.push(s);
+  });
+  return out;
 }
 /* ===== Rule editor ===== */
 function ruleDialog(rule, isTemplate) {
@@ -1247,8 +1350,8 @@ function ruleDialog(rule, isTemplate) {
 function aiDialog() {
   const nums = seatNumbers();
   const d = dialog({
-    title: '文章でAIに条件を追加', icon: 'auto_awesome', wide: true,
-    body: `<div class="sub">日本語で条件を書くと、AIが条件に変換します。複数の条件も一度に書けます。内容は追加前に確認できます。</div>
+    title: caps.sample ? '文章でAIに条件を追加' : '文章で条件を追加', icon: 'auto_awesome', wide: true,
+    body: `<div class="sub">${caps.sample ? '日本語で条件を書くと、AIが条件に変換します。' : '日本語で条件を書くと、条件に変換します（簡易解析）。「〇〇は□□の隣」「□□の後ろに〇〇」「Aと Bは3マス離す」のような書き方を認識します。'}複数の条件は改行で区切ってください。追加前に内容を確認できます。</div>
     <label class="field"><span>条件の文章</span><textarea id="aiTa" rows="5" placeholder="例:\n・田中は佐藤の隣にしたい\n・木村と小林は3マス以上離す\n・視力の人は前の2列\n・男子同士は隣にしない（できれば）"></textarea></label>
     <div class="row"><button class="btn filled" id="aiGo"><span class="ms">auto_awesome</span>条件に変換</button><span class="sub" id="aiSt"></span></div><div id="aiOut" class="stack"></div>`,
     actions: [{ label: '閉じる' }]
@@ -1275,11 +1378,12 @@ nameやtagは上のリストにあるものだけを使う。該当が無い場�
 文章:
 ${text}`;
     try {
-      const arr = await caps.sample.json(prompt);
+      const arr = caps.sample ? await caps.sample.json(prompt) : parseLocal(text);
       const list = (Array.isArray(arr) ? arr : arr && arr.rules ? arr.rules : []).map(aiToRule).filter(Boolean);
-      if (!list.length) { st.textContent = ''; out.innerHTML = '<div class="banner warn"><span class="ms">info</span><div>条件に変換できませんでした。メンバー名やタグを含めて書き直してください。</div></div>'; return; }
+      const warnHtml = arr && arr.warn && arr.warn.length ? `<div class="banner warn"><span class="ms">info</span><div>解釈できなかった文：${arr.warn.map(x => esc(x)).join(' ／ ')}<br>メンバー名やタグを入れて、言い方を変えてみてください。</div></div>` : '';
+      if (!list.length) { st.textContent = ''; out.innerHTML = warnHtml || '<div class="banner warn"><span class="ms">info</span><div>条件に変換できませんでした。メンバー名やタグを含めて書き直してください。</div></div>'; return; }
       st.textContent = `${list.length}件の候補`;
-      out.innerHTML = list.map((r, i) => `<label class="rule" style="cursor:pointer"><input type="checkbox" checked data-ai="${i}" style="width:20px;height:20px;accent-color:var(--primary)"><div class="txt"><div>${r.hard ? '<span class="badge">必須</span>' : `<span class="badge soft">できれば ★${r.w}</span>`}</div><div>${ruleSentence(r)}</div>${r._warn ? `<div class="sub" style="color:var(--error)">未登録の名前/タグ: ${esc(r._warn)}</div>` : ''}</div></label>`).join('') + `<div><button class="btn filled" id="aiAdd"><span class="ms">add</span>選んだ条件を追加</button></div>`;
+      out.innerHTML = warnHtml + list.map((r, i) => `<label class="rule" style="cursor:pointer"><input type="checkbox" checked data-ai="${i}" style="width:20px;height:20px;accent-color:var(--primary)"><div class="txt"><div>${r.hard ? '<span class="badge">必須</span>' : `<span class="badge soft">できれば ★${r.w}</span>`}</div><div>${ruleSentence(r)}</div>${r._warn ? `<div class="sub" style="color:var(--error)">未登録の名前/タグ: ${esc(r._warn)}</div>` : ''}</div></label>`).join('') + `<div><button class="btn filled" id="aiAdd"><span class="ms">add</span>選んだ条件を追加</button></div>`;
       $('#aiAdd', d.el).onclick = () => { const picks = $$('[data-ai]', d.el).filter(c => c.checked).map(c => list[+c.dataset.ai]); picks.forEach(r => { delete r._warn; S.rules.push(r); }); save(); renderRules(); d.close(); snack(`${picks.length}件の条件を追加しました`); };
     } catch (e) { st.textContent = ''; out.innerHTML = `<div class="banner"><span class="ms">error</span><div>${e && e.code === 'not_granted' ? 'AIの利用が許可されていません。' : e && e.code === 'rate_limited' ? '少し待ってからもう一度お試しください。' : 'AIによる変換に失敗しました。通常の「条件を追加」をお使いください。'}</div></div>`; }
   };
@@ -1319,8 +1423,8 @@ function exportText() {
   const res = S.result; if (!res) return '';
   if (exportKind === 'grid') { const rows = gridRows(res.assign, true); const hdr = S.layout.teacher && S.view === 'teacher' ? ['【教卓・黒板】'] : []; const ft = S.layout.teacher && S.view === 'student' ? ['【教卓・黒板】'] : []; return [...hdr, ...rows.map(r => r.join('\t')), ...ft].join('\n'); }
   const nums = seatNumbers(); const L = S.layout;
-  const lines = ['席No,行,列,班,名前,タグ'];
-  S.layout.cells.forEach((c, i) => { if (!c.s) return; const m = res.assign[i] ? memberById(res.assign[i]) : null; lines.push([nums[i], Math.floor(i / L.cols) + 1, i % L.cols + 1, c.g || '', m ? m.name : '(空席)', m ? m.tags.join('/') : ''].join(',')); });
+  const lines = ['席No,行,列,班,出席番号,名前,タグ'];
+  S.layout.cells.forEach((c, i) => { if (!c.s) return; const m = res.assign[i] ? memberById(res.assign[i]) : null; lines.push([nums[i], Math.floor(i / L.cols) + 1, i % L.cols + 1, c.g || '', m && m.no != null ? m.no : '', m ? m.name : '(空席)', m ? m.tags.join('/') : ''].join(',')); });
   return lines.join('\n');
 }
 function histStats() {
@@ -1428,7 +1532,12 @@ async function fbInit() {
     sdk.onAuthStateChanged(cloud.auth, onUser);
   } catch (e) { console.error(e); if (need) gate('retry', 'Firebaseに接続できません。ネットワークと設定（firebase-config.js）を確認してください。'); else snack('クラウド同期を初期化できませんでした'); }
 }
-function setStatus(s) { if (!cloud) return; cloud.status = s; const b = $('#btnCloud .ms'); if (b) { b.textContent = { off: 'cloud_off', sync: 'cloud_sync', ok: 'cloud_done', err: 'sync_problem' }[s]; b.style.color = s === 'err' ? 'var(--error)' : s === 'ok' ? 'var(--primary)' : ''; } }
+function setStatus(s) { if (!cloud) return; cloud.status = s; renderCloudBtn(); }
+function renderCloudBtn() {
+  const b = $('#btnCloud'); if (!b || !cloud) return; const st = cloud.status, u = cloud.user, ic = { off: 'cloud_off', sync: 'sync', ok: 'check_circle', err: 'error' }[st];
+  b.innerHTML = u ? `${u.photoURL ? `<img class="av" src="${esc(u.photoURL)}" referrerpolicy="no-referrer" alt="">` : `<span class="av" style="display:grid;place-items:center;background:var(--primary-c);color:var(--on-primary-c);font-weight:700">${esc((u.displayName || u.email || '?').slice(0, 1).toUpperCase())}</span>`}<span class="ms fill stb ${st}">${ic}</span>` : '<span class="ms">cloud_off</span>';
+  b.title = u ? `${u.displayName || u.email}（${{ ok: '同期済み', sync: '同期中…', err: '同期エラー', off: '未接続' }[st]}）` : 'アカウントと同期';
+}
 async function onUser(user) {
   const need = FB.requireLogin !== false;
   if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login'); return; }
