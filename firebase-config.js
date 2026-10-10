@@ -8,6 +8,7 @@ window.SEKIGAE_FIREBASE = {
     projectId: "sekigae-data",
     appId: "1:906980824544:web:d7ee6bfa2cb3ce15b1c785"
   },
-  requireLogin: true,      // true: Googleログインしないと使えない / false: ログインなしでも使え任意で同期
-  allowedEmails: []        // 例: ["teacher@example.com"]。空なら任意のGoogleアカウントを許可
+   requireLogin: true,
+   googleClientId: "906980824544-vjl8s4gub637sfinvs7spf6issne07e2.apps.googleusercontent.com",
+   allowedEmails: []
 };
