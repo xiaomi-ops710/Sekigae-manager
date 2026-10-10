@@ -1,4 +1,5 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon.svg">
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="席替え"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="firebase-config.js"></script><script>try{var f=window.SEKIGAE_FIREBASE;if(f&&f.config&&f.config.apiKey&&f.requireLogin!==false)document.documentElement.classList.add("gated")}catch(e){}</script>
 <title>席替えスタジオ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap">
@@ -210,6 +211,19 @@ input[type=range]{width:100%;accent-color:var(--primary)}
   #printSheet{display:block!important}
   #printSheet img{width:100%;max-height:calc(100vh - 8mm);object-fit:contain}
 }
+</style>
+<style>
+.gate{position:fixed;inset:0;z-index:50;background:var(--surface);display:none;place-items:center;padding:24px}
+.gated .gate{display:grid}
+.gated #app{visibility:hidden}
+.gate .gc{width:min(420px,100%);display:flex;flex-direction:column;gap:20px;align-items:center;text-align:center;padding:32px 24px;border-radius:28px;background:var(--surf)}
+.gate .logo{width:72px;height:72px;border-radius:20px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center}
+.gate .logo .ms{font-size:40px}
+.gate h2{font:400 26px/34px var(--font);margin:0}
+.btn.g{background:#fff;color:#1f1f1f;border:1px solid #747775;height:44px;padding:0 20px 0 12px}
+.btn.g svg{width:20px;height:20px}
+.spin{width:36px;height:36px;border-radius:50%;border:4px solid var(--outline-v);border-top-color:var(--primary);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head><body>
 <div id="app">
@@ -1380,4 +1394,126 @@ function renderData() {
     claude.use('downloads').then(d => { if (d) caps.downloads = d; }).catch(() => { });
   }
 })();
+/* ===== Firebase sync + Google login (GitHub Pages build) ===== */
+const FB = (() => { const c = window.SEKIGAE_FIREBASE; return c && c.config && c.config.apiKey ? c : null; })();
+let cloud = null;
+const _save = save;
+save = function () { _save(); cloudSchedule(); };
+const gSvg = '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.3 5.7c4.3-4 6.8-9.9 6.8-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.100 0 24s.9 7.600 2.600 10.800l7.900-6.100z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.300-5.700c-2 1.400-4.700 2.300-8.600 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z"/></svg>';
+function gate(kind, msg) {
+  let g = $('#gate'); if (!g) { g = document.createElement('div'); g.id = 'gate'; g.className = 'gate'; document.body.appendChild(g); }
+  const inner = kind === 'loading' ? '<div class="spin"></div><div class="sub">接続しています…</div>'
+    : `<button class="btn g" id="gLogin">${gSvg}<span>Googleでログイン</span></button>${kind === 'retry' ? '<button class="btn text" id="gRetry">再読み込み</button>' : ''}`;
+  g.innerHTML = `<div class="gc"><div class="logo"><span class="ms fill">event_seat</span></div><h2>席替えスタジオ</h2>${kind === 'loading' ? '' : '<div class="sub">ご利用にはGoogleアカウントでのログインが必要です。<br>名簿データはあなたのアカウントにだけ保存されます。</div>'}${inner}${msg ? `<div class="banner" style="text-align:left"><span class="ms">error</span><div>${esc(msg)}</div></div>` : ''}</div>`;
+  const b = $('#gLogin', g); if (b) b.onclick = fbLogin; const r = $('#gRetry', g); if (r) r.onclick = () => location.reload();
+  document.documentElement.classList.add('gated');
+}
+function ungate() { document.documentElement.classList.remove('gated'); }
+async function loadSdk() {
+  if (window.__FAKE_SDK) return window.__FAKE_SDK;
+  const b = 'https://www.gstatic.com/firebasejs/10.14.1/';
+  const [a, au, fs] = await Promise.all([import(b + 'firebase-app.js'), import(b + 'firebase-auth.js'), import(b + 'firebase-firestore.js')]);
+  return { ...a, ...au, ...fs };
+}
+async function fbInit() {
+  if (!FB) return;
+  const need = FB.requireLogin !== false;
+  if (need) gate('loading');
+  try {
+    const sdk = await loadSdk(); const app = sdk.initializeApp(FB.config); let db;
+    try { db = sdk.initializeFirestore(app, { localCache: sdk.persistentLocalCache({ tabManager: sdk.persistentMultipleTabManager() }) }); } catch (e) { db = sdk.getFirestore(app); }
+    cloud = { sdk, app, db, auth: sdk.getAuth(app), user: null, classId: null, classes: [], unsub: null, lastRev: null, timer: null, applying: false, status: 'off' };
+    const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'btnCloud'; btn.title = 'アカウントと同期'; btn.innerHTML = '<span class="ms">cloud_off</span>'; btn.onclick = accountDialog;
+    $('#topbar').insertBefore(btn, $('#btnTheme'));
+    sdk.onAuthStateChanged(cloud.auth, onUser);
+  } catch (e) { console.error(e); if (need) gate('retry', 'Firebaseに接続できません。ネットワークと設定（firebase-config.js）を確認してください。'); else snack('クラウド同期を初期化できませんでした'); }
+}
+function setStatus(s) { if (!cloud) return; cloud.status = s; const b = $('#btnCloud .ms'); if (b) { b.textContent = { off: 'cloud_off', sync: 'cloud_sync', ok: 'cloud_done', err: 'sync_problem' }[s]; b.style.color = s === 'err' ? 'var(--error)' : s === 'ok' ? 'var(--primary)' : ''; } }
+async function onUser(user) {
+  const need = FB.requireLogin !== false;
+  if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login'); return; }
+  const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
+  if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
+  cloud.user = user;
+  try { await loadClasses(); ungate(); setStatus('ok'); }
+  catch (e) { console.error(e); setStatus('err'); if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
+}
+async function fbLogin() {
+  const { sdk, auth } = cloud; const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  try { if (standalone) await sdk.signInWithRedirect(auth, p); else await sdk.signInWithPopup(auth, p); }
+  catch (e) {
+    if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { try { await sdk.signInWithRedirect(auth, p); return; } catch (x) { e = x; } }
+    if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return;
+    const m = e && e.code === 'auth/unauthorized-domain' ? 'このドメインが承認済みドメインに追加されていません（Firebase Authentication の設定）。' : 'ログインに失敗しました。' + (e && e.code ? `（${e.code}）` : '');
+    if (FB.requireLogin !== false) gate('login', m); else snack(m, 5000);
+  }
+}
+/* ----- data ----- */
+const cpath = () => `users/${cloud.user.uid}/classes`;
+function pack() { const { history, result, ...core } = S; return { name: (cloud.classes.find(c => c.id === cloud.classId) || {}).name || 'クラス', core: JSON.stringify(core), hist: JSON.stringify(history || []), result: JSON.stringify(result || null), rev: cloud.nextRev = uid() + Date.now().toString(36), updatedAt: cloud.sdk.serverTimestamp() }; }
+function unpack(d) { const core = JSON.parse(d.core); return { ...core, history: JSON.parse(d.hist || '[]'), result: d.result ? JSON.parse(d.result) : null }; }
+async function loadClasses() {
+  const { sdk, db } = cloud; const snap = await sdk.getDocs(sdk.collection(db, cpath()));
+  cloud.classes = snap.docs.map(d => ({ id: d.id, name: d.data().name || 'クラス' }));
+  if (!cloud.classes.length) { const id = uid(); cloud.classes = [{ id, name: 'クラス1' }]; cloud.classId = id; await pushNow(); }
+  let want = null; try { want = localStorage.getItem('sekigae.cls.' + cloud.user.uid); } catch (e) { }
+  await openClass(cloud.classes.find(c => c.id === want) ? want : cloud.classes[0].id);
+}
+async function openClass(id) {
+  const { sdk, db } = cloud; cloudDetach(); cloud.classId = id; try { localStorage.setItem('sekigae.cls.' + cloud.user.uid, id); } catch (e) { }
+  const ref = sdk.doc(db, cpath(), id); const snap = await sdk.getDoc(ref);
+  if (snap.exists()) { const d = snap.data(); cloud.lastRev = d.rev; applyRemote(d, false); }
+  cloud.unsub = sdk.onSnapshot(ref, s => {
+    if (!s.exists() || s.metadata.hasPendingWrites) return; const d = s.data();
+    if (d.rev === cloud.lastRev || d.rev === cloud.nextRev) return;
+    cloud.lastRev = d.rev; applyRemote(d, true);
+  });
+  const cl = cloud.classes.find(c => c.id === id); const h = $('#topbar h1 span:last-child'); if (h) h.textContent = cl ? `席替えスタジオ・${cl.name}` : '席替えスタジオ';
+}
+function applyRemote(d, announce) {
+  cloud.applying = true; const page = S.page;
+  try { S = { ...unpack(d), page }; } catch (e) { console.error(e); cloud.applying = false; return; }
+  _save(); clearTimers(); hiddenSet.clear(); undoStack = []; redoStack = []; sel = null; lastFail = null; renderPage(S.page);
+  if (announce) snack('他の端末の変更を反映しました'); cloud.applying = false;
+}
+function cloudDetach() { if (cloud && cloud.unsub) { cloud.unsub(); cloud.unsub = null; } if (cloud) clearTimeout(cloud.timer); }
+function cloudSchedule() { if (!cloud || !cloud.user || !cloud.classId || cloud.applying) return; setStatus('sync'); clearTimeout(cloud.timer); cloud.timer = setTimeout(pushNow, 1500); }
+async function pushNow() {
+  if (!cloud || !cloud.user || !cloud.classId) return; clearTimeout(cloud.timer);
+  try { const { sdk, db } = cloud; const data = pack(); cloud.lastRev = data.rev; await sdk.setDoc(sdk.doc(db, cpath(), cloud.classId), data); setStatus('ok'); }
+  catch (e) { console.error(e); setStatus('err'); snack('クラウドに保存できませんでした。通信状況を確認してください', 4000); }
+}
+function emptyClassState() { const s = defaultState(); s.members = []; s.rules = []; s.layout = makeLayout('plain', 5, 6); s.sample = false; s.history = []; s.result = null; return s; }
+function accountDialog() {
+  if (!cloud) return;
+  const u = cloud.user;
+  if (!u) { dialog({ title: 'クラウド同期', icon: 'cloud', body: '<div>ログインすると、名簿・レイアウト・条件・履歴がクラウドに保存され、複数の端末で使えます。</div>', actions: [{ label: '閉じる' }, { label: 'Googleでログイン', kind: 'filled', icon: 'login', onClick: () => { fbLogin(); } }] }); return; }
+  const render = () => {
+    const el = $('#acBody'); if (!el) return;
+    el.innerHTML = `<div class="row"><span class="ms">account_circle</span><div class="grow"><div style="font-weight:500">${esc(u.displayName || '')}</div><div class="sub">${esc(u.email || '')}</div></div><span class="chip tag" style="height:26px">${{ ok: '同期済み', sync: '同期中…', err: '同期エラー', off: '未接続' }[cloud.status]}</span></div>
+    <div><div class="lbl">クラス</div><div class="stack" style="gap:6px">${cloud.classes.map(c => `<div class="hist"><span class="ms">${c.id === cloud.classId ? 'radio_button_checked' : 'radio_button_unchecked'}</span><label class="field grow" style="margin:0"><input data-cn="${c.id}" value="${esc(c.name)}" aria-label="クラス名"></label>${c.id === cloud.classId ? '' : `<button class="btn tonal sm" data-co="${c.id}">開く</button>`}<button class="icon-btn" data-cd="${c.id}" title="削除"><span class="ms">delete</span></button></div>`).join('')}</div></div>
+    <div class="row"><button class="btn outlined sm" id="acNew"><span class="ms">add</span>空のクラスを追加</button><button class="btn outlined sm" id="acDup"><span class="ms">content_copy</span>このクラスを複製</button></div>`;
+    $$('[data-cn]', el).forEach(i => i.onchange = async () => { const c = cloud.classes.find(x => x.id === i.dataset.cn); c.name = i.value.trim() || 'クラス'; if (c.id === cloud.classId) { await pushNow(); const h = $('#topbar h1 span:last-child'); if (h) h.textContent = `席替えスタジオ・${c.name}`; } else { const { sdk, db } = cloud; await sdk.setDoc(sdk.doc(db, cpath(), c.id), { name: c.name }, { merge: true }); } });
+    $$('[data-co]', el).forEach(b => b.onclick = async () => { await pushNow(); await openClass(b.dataset.co); render(); snack('クラスを切り替えました'); });
+    $$('[data-cd]', el).forEach(b => b.onclick = () => confirmDlg('このクラスのデータを完全に削除します。元に戻せません。', '削除する', async () => {
+      const id = b.dataset.cd; await cloud.sdk.deleteDoc(cloud.sdk.doc(cloud.db, cpath(), id)); cloud.classes = cloud.classes.filter(c => c.id !== id);
+      if (!cloud.classes.length) { const nid = uid(); cloud.classes = [{ id: nid, name: 'クラス1' }]; cloud.classId = nid; S = emptyClassState(); await pushNow(); await openClass(nid); } else if (id === cloud.classId) await openClass(cloud.classes[0].id);
+      snack('削除しました');
+    }));
+    $('#acNew').onclick = async () => { await pushNow(); const id = uid(); cloud.classes.push({ id, name: `クラス${cloud.classes.length + 1}` }); cloud.classId = id; S = { ...emptyClassState(), page: S.page }; await pushNow(); await openClass(id); render(); };
+    $('#acDup').onclick = async () => { await pushNow(); const cur = cloud.classes.find(c => c.id === cloud.classId); const id = uid(); cloud.classes.push({ id, name: (cur ? cur.name : 'クラス') + 'のコピー' }); cloud.classId = id; await pushNow(); await openClass(id); render(); };
+  };
+  dialog({
+    title: 'アカウントと同期', icon: 'cloud', body: '<div id="acBody" class="stack" style="gap:20px"></div>',
+    actions: [{ label: 'ログアウト', icon: 'logout', onClick: async () => { await pushNow(); cloudDetach(); await cloud.sdk.signOut(cloud.auth); if (FB.requireLogin !== false) { try { localStorage.removeItem(LS); localStorage.removeItem(LS + '.slots'); } catch (e) { } S = defaultState(); } } }, { label: '今すぐ同期', icon: 'sync', onClick: async () => { await pushNow(); snack('同期しました'); } }, { label: '閉じる', kind: 'filled' }]
+  });
+  render();
+}
+function setupHint() {
+  const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'btnCloud'; btn.title = 'クラウド同期（未設定）'; btn.innerHTML = '<span class="ms">cloud_off</span>';
+  btn.onclick = () => dialog({ title: 'クラウド同期は未設定です', icon: 'cloud_off', body: '<div>Googleログインとクラウド保存を使うには、<b>firebase-config.js</b> にFirebaseの設定値を入れて公開し直してください。</div><div class="sub">手順はREADME.mdの「Googleログイン必須 + Firebase同期」を参照してください。設定するまでは、データはこの端末のブラウザ内に保存されます。</div>', actions: [{ label: '閉じる', kind: 'filled' }] });
+  $('#topbar').insertBefore(btn, $('#btnTheme'));
+}
+if (FB) fbInit(); else setupHint();
 </script></body></html>
