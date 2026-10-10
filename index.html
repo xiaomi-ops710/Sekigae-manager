@@ -1749,7 +1749,13 @@ function gisLogin() {
     callback: async r => {
       dlog('gis cb ' + (r && (r.error || (r.access_token ? 'token' : 'empty'))));
       if (!r || r.error || !r.access_token) { if (r && (r.error === 'access_denied' || r.error === 'popup_closed')) { if (need) gate('login', ''); return; } return fail(r || {}); }
-      try { if (need) gate('loading', 'ログインしています…'); const cr = sdk.GoogleAuthProvider.credential(null, r.access_token); const u = await sdk.signInWithCredential(auth, cr); dlog('credential ok'); if (u && u.user && !cloud.user) onUser(u.user); }
+      try { if (need) gate('loading', 'ログインしています…'); const cr = sdk.GoogleAuthProvider.credential(null, r.access_token); let u = null, err = null;
+        for (let k = 0; k < 5 && !u; k++) {
+          if (document.visibilityState !== 'visible') await new Promise(rs => { const f = () => { if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', f); rs(); } }; document.addEventListener('visibilitychange', f); setTimeout(rs, 4000); });
+          await new Promise(rs => setTimeout(rs, k ? 700 * k : 400));
+          try { u = await sdk.signInWithCredential(auth, cr); } catch (e) { err = e; dlog('try' + (k + 1) + ' ' + (e && e.code)); if (!(e && e.code === 'auth/network-request-failed')) throw e; }
+        }
+        if (!u) throw err; dlog('credential ok'); if (u && u.user && !cloud.user) onUser(u.user); }
       catch (e) { fail(e); }
     },
     error_callback: e => { dlog('gis err ' + (e && e.type)); if (e && (e.type === 'popup_closed' || e.type === 'popup_failed_to_open')) { if (need) gate('login', e.type === 'popup_failed_to_open' ? 'ポップアップを開けませんでした。もう一度タップしてください。' : ''); return; } fail({ message: e && e.type }); }
