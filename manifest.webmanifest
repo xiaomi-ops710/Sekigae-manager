@@ -1,0 +1,2 @@
+{"name":"席替えスタジオ","short_name":"席替え","description":"制約を満たす席替えを自動生成","lang":"ja","start_url":"./","scope":"./","display":"standalone","orientation":"any","background_color":"#f5fafb","theme_color":"#006874",
+"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"icon-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"},{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
