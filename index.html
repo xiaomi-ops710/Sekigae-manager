@@ -1671,7 +1671,7 @@ async function fbInit() {
     cloud = { sdk, app, db, auth: makeAuth(sdk, app), user: null, classId: null, classes: [], unsub: null, lastRev: null, timer: null, applying: false, status: 'off' };
     const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'btnCloud'; btn.title = 'アカウントと同期'; btn.innerHTML = '<span class="ms">cloud_off</span>'; btn.onclick = accountDialog;
     $('#topbar').appendChild(btn);
-    cloud.redirectErr = null; if (FB.googleClientId) loadGis().catch(() => { });
+    dlog('init ' + location.pathname); cloud.redirectErr = null; if (FB.googleClientId) loadGis().catch(() => { });
     if (sdk.getRedirectResult) sdk.getRedirectResult(cloud.auth).catch(e => { cloud.redirectErr = e; if (need && !cloud.user) gate('login', authMsg(e)); });
     cloud.authTimer = setTimeout(() => { if (need && !cloud.user) gate('retry', 'サーバーから応答がありません。通信状況を確認して、再読み込みしてください。'); }, 12000);
     sdk.onAuthStateChanged(cloud.auth, onUser);
@@ -1684,6 +1684,7 @@ function renderCloudBtn() {
   b.title = u ? `${u.displayName || u.email}（${{ ok: '同期済み', sync: '同期中…', err: '同期エラー', off: '未接続' }[st]}）` : 'アカウントと同期';
 }
 async function onUser(user) {
+  dlog('authState ' + (user ? 'user ' + (user.email || user.uid) : 'null'));
   const need = FB.requireLogin !== false; clearTimeout(cloud.authTimer);
   if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
   const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
@@ -1691,7 +1692,7 @@ async function onUser(user) {
   if (cloud.user && cloud.user.uid === user.uid) return;
   cloud.user = user;
   try { if (need && document.documentElement.classList.contains('gated')) gate('loading', 'データを読み込んでいます…'); await loadClasses(); ungate(); setStatus('ok'); }
-  catch (e) { console.error(e); setStatus('err'); if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
+  catch (e) { console.error(e); dlog('load err ' + (e && (e.code || e.message))); setStatus('err'); if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
 }
 
 
@@ -1722,6 +1723,7 @@ function gate(kind, msg) {
   <div class="rise" style="animation-delay:.15s"><button class="btn g" id="gLogin">${gSvg}<span>Googleでログイン</span></button>${kind === 'retry' ? '<button class="btn text" id="gRetry" style="margin-left:8px"><span class="ms">refresh</span>再読み込み</button>' : ''}</div>
   ${msg ? `<div class="banner rise" style="text-align:left;animation-delay:.1s"><span class="ms">error</span><div>${esc(msg)}</div></div>` : ''}
   <div class="feat rise" style="animation-delay:.2s"><span><span class="ms sm">lock</span>名簿はあなたのアカウントだけに保存</span><span><span class="ms sm">sync</span>iPadとパソコンで同期</span></div>`}</div>`;
+  if (!loading) { const lg = dget(); if (lg.length) { const d = document.createElement('details'); d.className = 'rise'; d.style.cssText = 'margin-top:14px;text-align:left;font-size:11px;opacity:.8'; d.innerHTML = '<summary>診断情報（うまくいかない時に送ってください）</summary><pre style="white-space:pre-wrap;user-select:text;-webkit-user-select:text;margin:6px 0">' + esc(lg.join('\n')) + '</pre>'; $('.gc', g).appendChild(d); } }
   const b = $('#gLogin', g); if (b) b.onclick = fbLogin; const r = $('#gRetry', g); if (r) r.onclick = () => location.reload();
   document.documentElement.classList.add('gated');
 }
@@ -1729,6 +1731,9 @@ function makeAuth(sdk, app) {
   if (sdk.initializeAuth && sdk.indexedDBLocalPersistence) { try { return sdk.initializeAuth(app, { persistence: [sdk.indexedDBLocalPersistence, sdk.browserLocalPersistence, sdk.browserSessionPersistence], popupRedirectResolver: sdk.browserPopupRedirectResolver }); } catch (e) { } }
   return sdk.getAuth(app);
 }
+const DK = 'sekigae.diag';
+function dlog(m) { try { const a = JSON.parse(localStorage.getItem(DK) || '[]'); a.push(new Date().toTimeString().slice(0, 8) + ' ' + m); localStorage.setItem(DK, JSON.stringify(a.slice(-14))); } catch (e) { } }
+function dget() { try { return JSON.parse(localStorage.getItem(DK) || '[]'); } catch (e) { return []; } }
 let gisP = null;
 function loadGis() {
   if (gisP) return gisP;
@@ -1737,20 +1742,22 @@ function loadGis() {
 }
 function gisLogin() {
   const { sdk, auth } = cloud, need = FB.requireLogin !== false;
-  const fail = e => { const m = e && e.code ? authMsg(e) : 'Googleログインに失敗しました。' + ((e && (e.error || e.message)) ? `（${e.error || e.message}）` : ''); if (need) gate('login', m); else snack(m, 5000); };
+  const fail = e => { dlog('fail ' + (e && (e.code || e.error || e.message))); const m = e && e.code ? authMsg(e) : 'Googleログインに失敗しました。' + ((e && (e.error || e.message)) ? `（${e.error || e.message}）` : ''); if (need) gate('login', m); else snack(m, 5000); };
   if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().catch(() => { }); fail({ message: 'Googleの読み込み中です。もう一度タップしてください' }); return; }
   const tc = google.accounts.oauth2.initTokenClient({
     client_id: FB.googleClientId, scope: 'openid email profile',
     callback: async r => {
+      dlog('gis cb ' + (r && (r.error || (r.access_token ? 'token' : 'empty'))));
       if (!r || r.error || !r.access_token) { if (r && (r.error === 'access_denied' || r.error === 'popup_closed')) { if (need) gate('login', ''); return; } return fail(r || {}); }
-      try { if (need) gate('loading', 'ログインしています…'); const cr = sdk.GoogleAuthProvider.credential(null, r.access_token); const u = await sdk.signInWithCredential(auth, cr); if (u && u.user && !cloud.user) onUser(u.user); }
+      try { if (need) gate('loading', 'ログインしています…'); const cr = sdk.GoogleAuthProvider.credential(null, r.access_token); const u = await sdk.signInWithCredential(auth, cr); dlog('credential ok'); if (u && u.user && !cloud.user) onUser(u.user); }
       catch (e) { fail(e); }
     },
-    error_callback: e => { if (e && (e.type === 'popup_closed' || e.type === 'popup_failed_to_open')) { if (need) gate('login', e.type === 'popup_failed_to_open' ? 'ポップアップを開けませんでした。もう一度タップしてください。' : ''); return; } fail({ message: e && e.type }); }
+    error_callback: e => { dlog('gis err ' + (e && e.type)); if (e && (e.type === 'popup_closed' || e.type === 'popup_failed_to_open')) { if (need) gate('login', e.type === 'popup_failed_to_open' ? 'ポップアップを開けませんでした。もう一度タップしてください。' : ''); return; } fail({ message: e && e.type }); }
   });
   tc.requestAccessToken({ prompt: 'select_account' });
 }
 async function fbLogin() {
+  dlog('login tap ' + (FB.googleClientId ? 'gis' : 'firebase') + (matchMedia('(display-mode: standalone)').matches || navigator.standalone ? ' standalone' : ''));
   if (FB.googleClientId) return gisLogin();
   const { sdk, auth } = cloud, need = FB.requireLogin !== false; const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
   if (need) gate('loading', 'Googleでログインしています…');
