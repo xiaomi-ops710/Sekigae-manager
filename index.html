@@ -1671,7 +1671,7 @@ async function fbInit() {
     cloud = { sdk, app, db, auth: makeAuth(sdk, app), user: null, classId: null, classes: [], unsub: null, lastRev: null, timer: null, applying: false, status: 'off' };
     const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'btnCloud'; btn.title = 'アカウントと同期'; btn.innerHTML = '<span class="ms">cloud_off</span>'; btn.onclick = accountDialog;
     $('#topbar').appendChild(btn);
-    cloud.redirectErr = null;
+    cloud.redirectErr = null; if (FB.googleClientId) loadGis().catch(() => { });
     if (sdk.getRedirectResult) sdk.getRedirectResult(cloud.auth).catch(e => { cloud.redirectErr = e; if (need && !cloud.user) gate('login', authMsg(e)); });
     cloud.authTimer = setTimeout(() => { if (need && !cloud.user) gate('retry', 'サーバーから応答がありません。通信状況を確認して、再読み込みしてください。'); }, 12000);
     sdk.onAuthStateChanged(cloud.auth, onUser);
@@ -1729,7 +1729,29 @@ function makeAuth(sdk, app) {
   if (sdk.initializeAuth && sdk.indexedDBLocalPersistence) { try { return sdk.initializeAuth(app, { persistence: [sdk.indexedDBLocalPersistence, sdk.browserLocalPersistence, sdk.browserSessionPersistence], popupRedirectResolver: sdk.browserPopupRedirectResolver }); } catch (e) { } }
   return sdk.getAuth(app);
 }
+let gisP = null;
+function loadGis() {
+  if (gisP) return gisP;
+  gisP = new Promise((res, rej) => { if (window.google && google.accounts && google.accounts.oauth2) return res(); const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = () => res(); sc.onerror = () => { gisP = null; rej(new Error('gis')); }; document.head.appendChild(sc); });
+  return gisP;
+}
+function gisLogin() {
+  const { sdk, auth } = cloud, need = FB.requireLogin !== false;
+  const fail = e => { const m = e && e.code ? authMsg(e) : 'Googleログインに失敗しました。' + ((e && (e.error || e.message)) ? `（${e.error || e.message}）` : ''); if (need) gate('login', m); else snack(m, 5000); };
+  if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().catch(() => { }); fail({ message: 'Googleの読み込み中です。もう一度タップしてください' }); return; }
+  const tc = google.accounts.oauth2.initTokenClient({
+    client_id: FB.googleClientId, scope: 'openid email profile',
+    callback: async r => {
+      if (!r || r.error || !r.access_token) { if (r && (r.error === 'access_denied' || r.error === 'popup_closed')) { if (need) gate('login', ''); return; } return fail(r || {}); }
+      try { if (need) gate('loading', 'ログインしています…'); const cr = sdk.GoogleAuthProvider.credential(null, r.access_token); const u = await sdk.signInWithCredential(auth, cr); if (u && u.user && !cloud.user) onUser(u.user); }
+      catch (e) { fail(e); }
+    },
+    error_callback: e => { if (e && (e.type === 'popup_closed' || e.type === 'popup_failed_to_open')) { if (need) gate('login', e.type === 'popup_failed_to_open' ? 'ポップアップを開けませんでした。もう一度タップしてください。' : ''); return; } fail({ message: e && e.type }); }
+  });
+  tc.requestAccessToken({ prompt: 'select_account' });
+}
 async function fbLogin() {
+  if (FB.googleClientId) return gisLogin();
   const { sdk, auth } = cloud, need = FB.requireLogin !== false; const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
   if (need) gate('loading', 'Googleでログインしています…');
   try {
