@@ -1,4 +1,4 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="席替え"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!doctype html><html lang="ja" class="pages"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="席替え"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script src="firebase-config.js"></script><script>try{var f=window.SEKIGAE_FIREBASE;if(f&&f.config&&f.config.apiKey&&f.requireLogin!==false)document.documentElement.classList.add("gated")}catch(e){}</script>
 <title>席替えスタジオ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap">
@@ -257,12 +257,96 @@ input[type=range]{width:100%;accent-color:var(--primary)}
   .li,.rule{min-height:64px}
 }
 </style>
+<style>
+/* ===== Material 3 Expressive layer: bolder shapes, spring motion, emphasized type, tablet-first sizing ===== */
+:root{--spring:cubic-bezier(.34,1.56,.64,1)}
+html{-webkit-text-size-adjust:100%;overscroll-behavior:none}
+button,.nav,.chip,.seg button,.mname{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.pages #app{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#topbar{min-height:76px;padding-inline:20px}
+#topbar h1{font:800 25px/32px var(--font);letter-spacing:-.01em}
+#topbar h1 .ms{font-size:32px}
+.h-row h2{font:800 34px/42px var(--font);letter-spacing:-.015em}
+.card{border-radius:28px;padding:20px}
+.card h3{font:700 17px/24px var(--font)}
+#main{border-radius:36px 0 0 0;padding:8px 24px 120px}
+.page{padding-top:20px}
+.btn{height:48px;border-radius:24px;padding:0 24px;font-weight:700;transition:transform .4s var(--spring),border-radius .4s var(--spring),filter .2s,background .2s}
+.btn:active{transform:scale(.94);border-radius:14px}
+.btn.sm{height:40px;padding:0 18px}
+.btn.big{height:56px;border-radius:28px}
+.btn.filled{background:var(--primary);color:var(--on-primary)}
+.icon-btn{width:48px;height:48px;transition:transform .35s var(--spring),border-radius .35s var(--spring),background .2s}
+.icon-btn:active{transform:scale(.86);border-radius:16px}
+.seg{border:0;border-radius:0;gap:2px;overflow:visible}
+.seg button{border:0!important;height:44px;border-radius:10px;background:var(--surf-highest);padding:0 18px;font-weight:700;transition:background .2s,border-radius .4s var(--spring),transform .35s var(--spring)}
+.seg button:first-child{border-radius:22px 10px 10px 22px}
+.seg button:last-child{border-radius:10px 22px 22px 10px}
+.seg button:only-child{border-radius:22px}
+.seg button.on{background:var(--primary);color:var(--on-primary);border-radius:22px}
+.seg button:active{transform:scale(.94)}
+.chip{height:38px;border-radius:12px;transition:background .2s,border-radius .4s var(--spring),transform .35s var(--spring)}
+.chip.sel{border-radius:19px}
+.chip:active{transform:scale(.93)}
+.chip.tag{height:24px;border-radius:8px}
+.nav{width:88px;gap:6px;font-size:12px;font-weight:700}
+.nav .pill{width:64px;height:40px;border-radius:20px;transition:background .25s,border-radius .45s var(--spring),transform .45s var(--spring)}
+.nav.active .pill{background:var(--primary-c);color:var(--on-primary-c);transform:scale(1.06)}
+.nav:active .pill{transform:scale(.88);border-radius:14px}
+@media (min-width:720px){#app{grid-template-columns:96px minmax(0,1fr)}}
+.fab{height:64px;border-radius:24px;padding:0 28px 0 22px;font-size:16px;font-weight:800;transition:transform .4s var(--spring),border-radius .4s var(--spring);box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.fab:active{transform:scale(.93);border-radius:32px}
+.dlg{border-radius:32px}
+.dlg>header{font:800 26px/34px var(--font)}
+.cell{border-radius:16px}
+.cell.pick{transform:scale(1.06);transition:transform .35s var(--spring)}
+.field input,.field select,.field textarea{border-radius:14px;min-height:52px}
+.rule,.hist,.cand,.tray,.banner{border-radius:22px}
+.snack{border-radius:18px;font-weight:500}
+.badge{height:22px;border-radius:11px}
+.mno{border-radius:16px}
+.mrow{min-height:68px}
+.teacher{border-radius:20px;font-weight:700}
+#btnCloud{width:52px;height:52px}
+#btnCloud .av{width:46px;height:46px;box-shadow:0 0 0 3px var(--primary-c)}
+@media (pointer:coarse){.field input,.field select,.field textarea{font-size:16px}}
+/* gate */
+.gate{overflow:hidden;background:var(--surface);padding:clamp(20px,5vmin,56px)}
+.gate .blob{position:absolute;pointer-events:none}
+.gate .blob.a{width:min(78vmin,620px);height:min(78vmin,620px);left:-16vmin;top:-18vmin;background:var(--primary-c)}
+.gate .blob.b{width:min(66vmin,520px);height:min(66vmin,520px);right:-12vmin;bottom:-16vmin;background:var(--tertiary-c)}
+.gate .blob.c{width:min(28vmin,220px);height:min(28vmin,220px);right:12vmin;top:9vmin;background:var(--secondary-c)}
+.gate .gc{position:relative;background:transparent;padding:0;width:min(600px,100%);align-items:flex-start;text-align:left;gap:26px;border-radius:0}
+.gate .logo{width:124px;height:124px;border-radius:0;background:var(--primary)}
+.gate .logo .ms{font-size:60px}
+.gate h2{font:800 clamp(44px,9vmin,72px)/1.04 var(--font);letter-spacing:-.025em}
+.gate .lead{font:500 19px/1.7 var(--font);color:var(--on-surface-v);max-width:30em}
+.btn.g{height:64px;border-radius:32px;font-size:17px;font-weight:700;padding:0 34px 0 22px;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.btn.g svg{width:24px;height:24px}
+.gate .feat{display:flex;gap:10px;flex-wrap:wrap}
+.gate .feat>span{display:inline-flex;gap:8px;align-items:center;padding:10px 16px;border-radius:18px;background:var(--surf);font-weight:500;font-size:13px}
+.gate .xlw{width:112px;height:112px;border-radius:50%;background:var(--primary-c);display:grid;place-items:center}
+.gate .banner{max-width:30em}
+.rise{animation:rise .8s var(--spring) both}
+@keyframes rise{from{opacity:0;transform:translateY(28px) scale(.94)}to{opacity:1;transform:none}}
+@media (max-width:719px){#main{border-radius:28px 28px 0 0}.h-row h2{font-size:28px}}
+@media (prefers-reduced-motion:reduce){.rise{animation:none!important}}
+</style>
+<style>
+#boardHost .cell.seat,#boardHost .chip{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+@keyframes jig{0%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}100%{transform:rotate(-1.2deg)}}
+.cell.jig{animation:jig .26s ease-in-out infinite}
+.cell.jig:nth-child(even){animation-delay:-.13s}
+.cell.srcLift{opacity:.35;animation:none}
+.cell.drop{outline:3px solid var(--primary);outline-offset:2px;transform:scale(1.07);animation:none}
+.tray.drop{outline:3px dashed var(--primary);background:var(--primary-container)}
+.cell.ghost,.chip.ghost{box-shadow:0 12px 28px rgba(0,0,0,.35);opacity:.96;transition:none;animation:none}
+</style>
 </head><body>
 <div id="app">
   <header id="topbar">
     <h1><span class="ms fill">event_seat</span><span>席替えスタジオ</span></h1>
     <button class="icon-btn" id="btnTheme" title="テーマ切替" aria-label="テーマ切替"><span class="ms">brightness_6</span></button>
-    <button class="icon-btn" id="btnFs" title="全画面表示" aria-label="全画面表示"><span class="ms">fullscreen</span></button>
   </header>
   <nav id="rail" aria-label="メインナビゲーション">
     <button class="nav active" data-page="shuffle"><span class="pill"><span class="ms">shuffle</span></span>席替え</button>
@@ -903,25 +987,91 @@ function drawBoard() {
     const show = m && !hd && !rl;
     const star = show && m.tags.includes('学級委員') ? '<span class="ms star fill">star</span>' : '';
     const noS = m && m.no != null && m.no !== '' ? m.no + '番' : ''; const tg = show ? [noS, ...m.tags.filter(t => t !== '学級委員').slice(0, 2)].filter(Boolean).join(' ') : '';
-    const dr = mode === 'swap' && m && !hd && !rl && !locked ? ' draggable="true"' : '';
+    const dr = '';
     return `<div class="${cls.join(' ')}" data-i="${i}" data-g="${c.g}"${dr} style="--nfs:${S.settings.nameSize}px"><span class="no">${nums[i]}</span><span><span class="n">${esc(hd ? '？？？' : name)}</span><span class="tg">${esc(tg)}</span></span>${star}</div>`;
   }).join('');
   const teacher = `<div class="teacher"><span class="ms">podium</span>教卓・黒板</div>`;
   const un = unplaced();
   host.innerHTML = `${S.view === 'teacher' && L.teacher ? teacher : ''}<div class="board-wrap"><div class="board res${fsOn ? ' fs' : ''}" style="grid-template-columns:repeat(${L.cols},var(--cw));--cols:${L.cols}">${cells}</div></div>${S.view === 'student' && L.teacher ? `<div style="margin-top:12px">${teacher}</div>` : ''}${un.length ? `<div class="tray"><span class="sub" style="align-self:center">未配置 ${un.length}名（選んでから席をタップ）</span>${un.map(m => `<button class="chip ${trayPick === m.id ? 'sel' : ''}" data-tray="${m.id}">${esc(m.name)}</button>`).join('')}</div>` : ''}`;
   $$('.cell[data-i]', host).forEach(c => {
-    const i = +c.dataset.i; c.onclick = () => onCellClick(i);
+    const i = +c.dataset.i; c.onclick = () => { if (Date.now() < lpSuppress) return; onCellClick(i); };
     c.ondragstart = e => { dragFrom = i; try { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; } catch (x) { } };
     c.ondragover = e => { if (dragFrom != null) { e.preventDefault(); c.classList.add('dragover'); } };
     c.ondragleave = () => c.classList.remove('dragover');
     c.ondrop = e => { e.preventDefault(); const a = dragFrom; dragFrom = null; if (a != null && a !== i) swapCells(a, i); else drawBoard(); };
     c.ondragend = () => { dragFrom = null; $$('.dragover').forEach(x => x.classList.remove('dragover')); };
   });
+  enableLongPress(host);
   $$('[data-tray]', host).forEach(b => b.onclick = () => { trayPick = trayPick === b.dataset.tray ? null : b.dataset.tray; drawBoard(); });
   const gs = [...new Set(L.cells.filter(c => c.s && c.g).map(c => c.g))].sort();
   $('#legend').innerHTML = gs.map(g => `<span><span class="cell seat" data-g="${g}" style="display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px"></span> ${g}班</span>`).join('') + `<span><span class="ms sm star" style="position:static;vertical-align:-4px">star</span> 学級委員</span><span><span class="ms sm" style="vertical-align:-4px;color:var(--primary)">lock</span> ピン留め</span><span style="color:var(--error)">■ 赤枠＝条件に違反</span><span class="grow"></span><button class="btn text sm" id="btnClearSeats"><span class="ms">backspace</span>全員を席から外す</button>`;
   $('#btnClearSeats').onclick = () => { pushUndo(); Object.keys(res.assign).forEach(k => { if (!(res.locked || []).includes(+k)) res.assign[k] = null; }); afterEdit(); };
 }
+
+/* ----- long-press drag (iPad home-screen style) ----- */
+let lpSuppress = 0;
+function enableLongPress(host) {
+  let st = null;
+  const clear = () => { if (st) { clearTimeout(st.t); } };
+  const cellAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.cell.seat[data-i]') : null; };
+  const trayAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('.tray') : null; };
+  const end = commit => {
+    if (!st) return; clear();
+    const s = st; st = null;
+    document.removeEventListener('touchmove', blockTouch);
+    if (!s.lifted) return;
+    lpSuppress = Date.now() + 400;
+    s.ghost.remove(); $$('.cell.jig', host).forEach(c => c.classList.remove('jig', 'drop', 'srcLift'));
+    $$('.tray', host).forEach(t => t.classList.remove('drop'));
+    if (!commit) { drawBoard(); return; }
+    const res = S.result; res.locked = res.locked || [];
+    if (s.tray) { const tc = cellAt(s.x, s.y); if (tc) { const j = +tc.dataset.i; if (res.locked.includes(j)) { snack('ピン留めされた席には置けません'); drawBoard(); return; } pushUndo(); res.assign[j] = s.tray; trayPick = null; afterEdit(); beep(520, .06); return; } drawBoard(); return; }
+    const tc = cellAt(s.x, s.y);
+    if (tc) { const j = +tc.dataset.i; if (j === s.i) { drawBoard(); return; } swapCells(s.i, j); beep(620, .06); return; }
+    if (trayAt(s.x, s.y) || !document.elementFromPoint(s.x, s.y)?.closest('.board')) {
+      if (trayAt(s.x, s.y)) { pushUndo(); res.assign[s.i] = null; afterEdit(); return; }
+    }
+    drawBoard();
+  };
+  function blockTouch(e) { if (st && st.lifted) e.preventDefault(); }
+  host.onpointerdown = e => {
+    if (e.button > 0 || rolling || mode === 'lock' || !S.result) return;
+    const chip = e.target.closest && e.target.closest('[data-tray]');
+    const cell = e.target.closest && e.target.closest('.cell.seat[data-i]');
+    let tray = null, i = null;
+    if (chip) tray = chip.dataset.tray;
+    else if (cell) {
+      i = +cell.dataset.i; const res = S.result;
+      if (!res.assign[i] || (res.locked || []).includes(i) || hiddenSet.has(i)) return;
+    } else return;
+    if (st) end(false);
+    st = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, i, tray, el: chip || cell, id: e.pointerId, lifted: false };
+    st.t = setTimeout(() => {
+      if (!st) return; st.lifted = true; try { navigator.vibrate && navigator.vibrate(12); } catch (x) { }
+      document.addEventListener('touchmove', blockTouch, { passive: false });
+      const r = st.el.getBoundingClientRect(); const g = st.el.cloneNode(true); g.removeAttribute('data-i'); g.removeAttribute('data-tray'); g.classList.add('ghost');
+      g.style.cssText += `;position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;margin:0;z-index:9999;pointer-events:none`;
+      st.dx = st.sx - r.left; st.dy = st.sy - r.top; document.body.appendChild(g); st.ghost = g;
+      $$('.cell.seat[data-i]', host).forEach(c => { if (!(S.result.locked || []).includes(+c.dataset.i)) c.classList.add('jig'); });
+      if (st.el.classList.contains('cell')) st.el.classList.add('srcLift');
+      try { st.el.setPointerCapture(st.id); } catch (x) { }
+    }, 380);
+  };
+  host.onpointermove = e => {
+    if (!st || e.pointerId !== st.id) return;
+    st.x = e.clientX; st.y = e.clientY;
+    if (!st.lifted) { if (Math.hypot(st.x - st.sx, st.y - st.sy) > 10) { clear(); st = null; } return; }
+    e.preventDefault();
+    st.ghost.style.transform = `translate(${st.x - st.sx}px,${st.y - st.sy}px) scale(1.08) rotate(2deg)`;
+    $$('.cell.drop', host).forEach(c => c.classList.remove('drop'));
+    const tc = cellAt(st.x, st.y); if (tc && +tc.dataset.i !== st.i) tc.classList.add('drop');
+    const tr = $('.tray', host); if (tr) tr.classList.toggle('drop', !st.tray && !!trayAt(st.x, st.y));
+  };
+  host.onpointerup = e => { if (st && e.pointerId === st.id) end(true); };
+  host.onpointercancel = e => { if (st && e.pointerId === st.id) end(false); };
+  host.oncontextmenu = e => { if (st) e.preventDefault(); };
+}
+
 function afterEdit() { syncHistory(); save(); drawBoard(); renderChecks(); renderBanners(); updUndo(); }
 function swapCells(a, b) {
   const res = S.result; res.locked = res.locked || [];
@@ -1491,7 +1641,6 @@ function renderData() {
   const applyTheme = () => { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); };
   applyTheme();
   $('#btnTheme').onclick = () => { theme = theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto'; try { localStorage.setItem('sekigae.theme', theme); } catch (e) { } applyTheme(); snack({ auto: 'テーマ: 端末に合わせる', dark: 'テーマ: ダーク', light: 'テーマ: ライト' }[theme]); };
-  $('#btnFs').onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => snack('この環境では全画面にできません')); } catch (e) { snack('この環境では全画面にできません'); } };
   setPage(S.page || 'shuffle'); initExtras();
   if (window.claude && claude.use) {
     claude.use('sample').then(s => { if (s) { caps.sample = s; if (S.page === 'rules') renderRules(); } }).catch(() => { });
@@ -1504,14 +1653,7 @@ let cloud = null;
 const _save = save;
 save = function () { _save(); cloudSchedule(); };
 const gSvg = '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.3 5.7c4.3-4 6.8-9.9 6.8-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.100 0 24s.9 7.600 2.600 10.800l7.900-6.100z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.300-5.700c-2 1.400-4.700 2.300-8.600 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z"/></svg>';
-function gate(kind, msg) {
-  let g = $('#gate'); if (!g) { g = document.createElement('div'); g.id = 'gate'; g.className = 'gate'; document.body.appendChild(g); }
-  const inner = kind === 'loading' ? '<div class="spin"></div><div class="sub">接続しています…</div>'
-    : `<button class="btn g" id="gLogin">${gSvg}<span>Googleでログイン</span></button>${kind === 'retry' ? '<button class="btn text" id="gRetry">再読み込み</button>' : ''}`;
-  g.innerHTML = `<div class="gc"><div class="logo"><span class="ms fill">event_seat</span></div><h2>席替えスタジオ</h2>${kind === 'loading' ? '' : '<div class="sub">ご利用にはGoogleアカウントでのログインが必要です。<br>名簿データはあなたのアカウントにだけ保存されます。</div>'}${inner}${msg ? `<div class="banner" style="text-align:left"><span class="ms">error</span><div>${esc(msg)}</div></div>` : ''}</div>`;
-  const b = $('#gLogin', g); if (b) b.onclick = fbLogin; const r = $('#gRetry', g); if (r) r.onclick = () => location.reload();
-  document.documentElement.classList.add('gated');
-}
+
 function ungate() { document.documentElement.classList.remove('gated'); }
 async function loadSdk() {
   if (window.__FAKE_SDK) return window.__FAKE_SDK;
@@ -1522,13 +1664,16 @@ async function loadSdk() {
 async function fbInit() {
   if (!FB) return;
   const need = FB.requireLogin !== false;
-  if (need) gate('loading');
+  if (need) gate('loading', '接続しています…');
   try {
     const sdk = await loadSdk(); const app = sdk.initializeApp(FB.config); let db;
     try { db = sdk.initializeFirestore(app, { localCache: sdk.persistentLocalCache({ tabManager: sdk.persistentMultipleTabManager() }) }); } catch (e) { db = sdk.getFirestore(app); }
-    cloud = { sdk, app, db, auth: sdk.getAuth(app), user: null, classId: null, classes: [], unsub: null, lastRev: null, timer: null, applying: false, status: 'off' };
+    cloud = { sdk, app, db, auth: makeAuth(sdk, app), user: null, classId: null, classes: [], unsub: null, lastRev: null, timer: null, applying: false, status: 'off' };
     const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'btnCloud'; btn.title = 'アカウントと同期'; btn.innerHTML = '<span class="ms">cloud_off</span>'; btn.onclick = accountDialog;
-    $('#topbar').insertBefore(btn, $('#btnTheme'));
+    $('#topbar').appendChild(btn);
+    cloud.redirectErr = null;
+    if (sdk.getRedirectResult) sdk.getRedirectResult(cloud.auth).catch(e => { cloud.redirectErr = e; if (need && !cloud.user) gate('login', authMsg(e)); });
+    cloud.authTimer = setTimeout(() => { if (need && !cloud.user) gate('retry', 'サーバーから応答がありません。通信状況を確認して、再読み込みしてください。'); }, 12000);
     sdk.onAuthStateChanged(cloud.auth, onUser);
   } catch (e) { console.error(e); if (need) gate('retry', 'Firebaseに接続できません。ネットワークと設定（firebase-config.js）を確認してください。'); else snack('クラウド同期を初期化できませんでした'); }
 }
@@ -1539,25 +1684,65 @@ function renderCloudBtn() {
   b.title = u ? `${u.displayName || u.email}（${{ ok: '同期済み', sync: '同期中…', err: '同期エラー', off: '未接続' }[st]}）` : 'アカウントと同期';
 }
 async function onUser(user) {
-  const need = FB.requireLogin !== false;
-  if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login'); return; }
+  const need = FB.requireLogin !== false; clearTimeout(cloud.authTimer);
+  if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
   const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
   if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
+  if (cloud.user && cloud.user.uid === user.uid) return;
   cloud.user = user;
-  try { await loadClasses(); ungate(); setStatus('ok'); }
+  try { if (need && document.documentElement.classList.contains('gated')) gate('loading', 'データを読み込んでいます…'); await loadClasses(); ungate(); setStatus('ok'); }
   catch (e) { console.error(e); setStatus('err'); if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
 }
+
+
+/* ----- expressive gate ----- */
+function poly(n, a, rot = 0, pts = 72) { const o = []; for (let i = 0; i < pts; i++) { const t = i / pts * Math.PI * 2, r = 49 * (1 - a) * (1 + a * Math.cos(n * t + rot)); o.push(`${(50 + r * Math.cos(t)).toFixed(2)}% ${(50 + r * Math.sin(t)).toFixed(2)}%`); } return `polygon(${o.join(',')})`; }
+function ensureLoaderCss() {
+  if ($('#xlCss')) return; const sh = [[0, 0], [6, .13], [8, .09], [5, .15], [7, .11], [0, 0]];
+  const kf = sh.map(([n, a], i) => `${i * 20}%{clip-path:${poly(n, a, 0)};transform:rotate(${i * 72}deg)}`).join('');
+  const st = document.createElement('style'); st.id = 'xlCss'; st.textContent = `@keyframes xlm{${kf}}.xl{width:56px;height:56px;background:var(--primary);animation:xlm 4.8s cubic-bezier(.5,0,.3,1) infinite}`; document.head.appendChild(st);
+}
+function authMsg(e) {
+  const c = e && e.code || '';
+  if (c === 'auth/unauthorized-domain') return 'このドメインが承認済みドメインに追加されていません（Firebase Authentication の設定）。';
+  if (c === 'auth/network-request-failed') return '通信できませんでした。ネットワークを確認してください。';
+  if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') return 'この環境ではログイン情報を保存できません。Safariの設定で「すべてのCookieをブロック」をオフにするか、Safariで開いてください。';
+  if (c === 'auth/internal-error' || c === 'auth/missing-or-invalid-nonce') return 'ログインの途中でエラーが起きました。もう一度お試しください。';
+  return 'ログインに失敗しました。' + (c ? `（${c}）` : '');
+}
+function gate(kind, msg) {
+  ensureLoaderCss();
+  let g = $('#gate'); if (!g) { g = document.createElement('div'); g.id = 'gate'; g.className = 'gate'; document.body.appendChild(g); }
+  const loading = kind === 'loading';
+  g.innerHTML = `<i class="blob a" style="clip-path:${poly(8, .07)}"></i><i class="blob b" style="clip-path:${poly(6, .1, .4)}"></i><i class="blob c" style="clip-path:${poly(5, .13)}"></i>
+  <div class="gc"><div class="logo rise" style="clip-path:${poly(12, .06)}"><span class="ms fill">event_seat</span></div>
+  <h2 class="rise" style="animation-delay:.05s">席替え<br>スタジオ</h2>
+  ${loading ? `<div class="lead rise" style="animation-delay:.1s">${esc(msg || '接続しています…')}</div><div class="xlw rise" style="animation-delay:.15s"><div class="xl"></div></div>`
+      : `<div class="lead rise" style="animation-delay:.1s">Googleアカウントでログインすると、名簿と席替えをどの端末でも使えます。</div>
+  <div class="rise" style="animation-delay:.15s"><button class="btn g" id="gLogin">${gSvg}<span>Googleでログイン</span></button>${kind === 'retry' ? '<button class="btn text" id="gRetry" style="margin-left:8px"><span class="ms">refresh</span>再読み込み</button>' : ''}</div>
+  ${msg ? `<div class="banner rise" style="text-align:left;animation-delay:.1s"><span class="ms">error</span><div>${esc(msg)}</div></div>` : ''}
+  <div class="feat rise" style="animation-delay:.2s"><span><span class="ms sm">lock</span>名簿はあなたのアカウントだけに保存</span><span><span class="ms sm">sync</span>iPadとパソコンで同期</span></div>`}</div>`;
+  const b = $('#gLogin', g); if (b) b.onclick = fbLogin; const r = $('#gRetry', g); if (r) r.onclick = () => location.reload();
+  document.documentElement.classList.add('gated');
+}
+function makeAuth(sdk, app) {
+  if (sdk.initializeAuth && sdk.indexedDBLocalPersistence) { try { return sdk.initializeAuth(app, { persistence: [sdk.indexedDBLocalPersistence, sdk.browserLocalPersistence, sdk.browserSessionPersistence], popupRedirectResolver: sdk.browserPopupRedirectResolver }); } catch (e) { } }
+  return sdk.getAuth(app);
+}
 async function fbLogin() {
-  const { sdk, auth } = cloud; const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  try { if (standalone) await sdk.signInWithRedirect(auth, p); else await sdk.signInWithPopup(auth, p); }
-  catch (e) {
+  const { sdk, auth } = cloud, need = FB.requireLogin !== false; const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
+  if (need) gate('loading', 'Googleでログインしています…');
+  try {
+    const r = await sdk.signInWithPopup(auth, p);
+    if (r && r.user && !cloud.user) onUser(r.user);
+  } catch (e) {
     if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { try { await sdk.signInWithRedirect(auth, p); return; } catch (x) { e = x; } }
-    if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return;
-    const m = e && e.code === 'auth/unauthorized-domain' ? 'このドメインが承認済みドメインに追加されていません（Firebase Authentication の設定）。' : 'ログインに失敗しました。' + (e && e.code ? `（${e.code}）` : '');
-    if (FB.requireLogin !== false) gate('login', m); else snack(m, 5000);
+    const quiet = e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request');
+    const m = quiet ? '' : authMsg(e);
+    if (need) gate('login', m); else if (m) snack(m, 5000);
   }
 }
+
 /* ----- data ----- */
 const cpath = () => `users/${cloud.user.uid}/classes`;
 function pack() { const { history, result, ...core } = S; return { name: (cloud.classes.find(c => c.id === cloud.classId) || {}).name || 'クラス', core: JSON.stringify(core), hist: JSON.stringify(history || []), result: JSON.stringify(result || null), rev: cloud.nextRev = uid() + Date.now().toString(36), updatedAt: cloud.sdk.serverTimestamp() }; }
@@ -1622,7 +1807,7 @@ function accountDialog() {
 function setupHint() {
   const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'btnCloud'; btn.title = 'クラウド同期（未設定）'; btn.innerHTML = '<span class="ms">cloud_off</span>';
   btn.onclick = () => dialog({ title: 'クラウド同期は未設定です', icon: 'cloud_off', body: '<div>Googleログインとクラウド保存を使うには、<b>firebase-config.js</b> にFirebaseの設定値を入れて公開し直してください。</div><div class="sub">手順はREADME.mdの「Googleログイン必須 + Firebase同期」を参照してください。設定するまでは、データはこの端末のブラウザ内に保存されます。</div>', actions: [{ label: '閉じる', kind: 'filled' }] });
-  $('#topbar').insertBefore(btn, $('#btnTheme'));
+  $('#topbar').appendChild(btn);
 }
 if (FB) fbInit(); else setupHint();
 </script></body></html>
