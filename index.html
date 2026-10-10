@@ -342,6 +342,39 @@ button,.nav,.chip,.seg button,.mname{touch-action:manipulation;-webkit-tap-highl
 .tray.drop{outline:3px dashed var(--primary);background:var(--primary-container)}
 .cell.ghost,.chip.ghost{box-shadow:0 12px 28px rgba(0,0,0,.35);opacity:.96;transition:none;animation:none}
 </style>
+<style>
+@media (prefers-reduced-motion:no-preference){
+:root{--spr:cubic-bezier(.34,1.56,.64,1)}
+@keyframes pgIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+@keyframes dlgIn{from{opacity:0;transform:translateY(24px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes snIn{from{opacity:0;transform:translate(-50%,24px) scale(.9)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{0%{transform:scale(.3)}60%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes rip{from{transform:scale(0);opacity:.35}to{transform:scale(1);opacity:0}}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes cellIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+.page.active{animation:pgIn .42s var(--spr)}
+.page.active>.card,.page.active .card.acc{animation:cardIn .45s var(--spr) backwards}
+.page.active>.card:nth-child(2){animation-delay:.05s}.page.active>.card:nth-child(3){animation-delay:.1s}.page.active>.card:nth-child(4){animation-delay:.15s}
+.scrim{animation:scrimIn .2s ease-out}
+.dlg{animation:dlgIn .38s var(--spr)}
+.snack{animation:snIn .35s var(--spr)}
+.stb.sync{animation:spin 1s linear infinite}
+.stb.ok{animation:pop .5s var(--spr)}
+.stb.err{animation:shake .4s}
+#btnCloud .av{transition:transform .3s var(--spr)}#btnCloud:active .av{transform:scale(.88)}
+.chip{transition:transform .25s var(--spr),background .2s}.chip:active{transform:scale(.9)}
+.chip.sel{animation:pop .3s var(--spr)}
+.btn,.nav,.fab,.seg button{position:relative;overflow:hidden}
+.rippl{position:absolute;border-radius:50%;background:currentColor;pointer-events:none;animation:rip .55s ease-out forwards}
+.btn .ms,.fab .ms{transition:transform .3s var(--spr)}.btn:active .ms{transform:scale(1.25) rotate(-8deg)}
+.nav .ms{transition:transform .35s var(--spr)}.nav.active .ms{transform:scale(1.15)}
+.btn.busy .ms{animation:spin .8s linear infinite}
+details.acc>*:not(summary){animation:cardIn .3s ease-out}
+}
+</style>
 </head><body>
 <div id="app">
   <header id="topbar">
@@ -1647,6 +1680,13 @@ function renderData() {
     claude.use('downloads').then(d => { if (d) caps.downloads = d; }).catch(() => { });
   }
 })();
+
+/* tap ripple */
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest && e.target.closest('.btn,.nav,.fab,.seg button'); if (!b || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'rippl';
+  s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`; b.appendChild(s); setTimeout(() => s.remove(), 600);
+}, { passive: true });
 /* ===== Firebase sync + Google login (GitHub Pages build) ===== */
 const FB = (() => { const c = window.SEKIGAE_FIREBASE; return c && c.config && c.config.apiKey ? c : null; })();
 let cloud = null;
@@ -1726,7 +1766,6 @@ function gate(kind, msg) {
   <div class="rise" style="animation-delay:.15s"><button class="btn g" id="gLogin">${gSvg}<span>Googleでログイン</span></button>${kind === 'retry' ? '<button class="btn text" id="gRetry" style="margin-left:8px"><span class="ms">refresh</span>再読み込み</button>' : ''}</div>
   ${msg ? `<div class="banner rise" style="text-align:left;animation-delay:.1s"><span class="ms">error</span><div>${esc(msg)}</div></div>` : ''}
   <div class="feat rise" style="animation-delay:.2s"><span><span class="ms sm">lock</span>名簿はあなたのアカウントだけに保存</span><span><span class="ms sm">sync</span>iPadとパソコンで同期</span></div>`}</div>`;
-  if (!loading) { const lg = dget(); if (lg.length) { const d = document.createElement('details'); d.className = 'rise'; d.style.cssText = 'margin-top:14px;text-align:left;font-size:11px;opacity:.8'; d.innerHTML = '<summary>診断情報（うまくいかない時に送ってください）</summary><pre style="white-space:pre-wrap;user-select:text;-webkit-user-select:text;margin:6px 0">' + esc(lg.join('\n')) + '</pre>'; $('.gc', g).appendChild(d); } }
   const b = $('#gLogin', g); if (b) b.onclick = fbLogin; const r = $('#gRetry', g); if (r) r.onclick = () => location.reload();
   document.documentElement.classList.add('gated');
 }
