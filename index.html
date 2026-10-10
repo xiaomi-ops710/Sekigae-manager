@@ -1,0 +1,1383 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon.svg">
+<title>席替えスタジオ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap">
+<style>
+/* Layout: M3 navigation rail (wide) / bottom navigation bar (phone) + top app bar + content canvas */
+:root{
+  --primary:#006874;--on-primary:#fff;--primary-c:#97f0ff;--on-primary-c:#001f24;
+  --secondary-c:#cce8ec;--on-secondary-c:#051f23;--tertiary-c:#d3e4ff;--on-tertiary-c:#041c35;
+  --surface:#f5fafb;--surf-low:#eff5f6;--surf:#e9eff0;--surf-high:#e3e9ea;--surf-highest:#dde4e5;
+  --on-surface:#171d1e;--on-surface-v:#3f484a;--outline:#6f797a;--outline-v:#bfc8ca;
+  --error:#ba1a1a;--error-c:#ffdad6;--on-error-c:#410002;--ok:#1b6c3a;--ok-c:#b4f1c0;--warn-c:#ffdea6;--on-warn-c:#261900;
+  --g1:#ffd9de;--g2:#ffdcc2;--g3:#f5e29a;--g4:#c4ecb4;--g5:#b1ecdc;--g6:#bde2ff;--g7:#dcd2ff;--g8:#f6d0ee;
+  --shadow:0 1px 3px rgba(0,0,0,.25),0 1px 2px rgba(0,0,0,.2);
+  --font:'Noto Sans JP','Roboto',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --primary:#4fd8eb;--on-primary:#00363d;--primary-c:#004f58;--on-primary-c:#97f0ff;
+  --secondary-c:#334b4f;--on-secondary-c:#cce8ec;--tertiary-c:#334863;--on-tertiary-c:#d3e4ff;
+  --surface:#0e1415;--surf-low:#161d1e;--surf:#1a2122;--surf-high:#252b2c;--surf-highest:#303637;
+  --on-surface:#dee3e5;--on-surface-v:#bfc8ca;--outline:#899294;--outline-v:#3f484a;
+  --error:#ffb4ab;--error-c:#93000a;--on-error-c:#ffdad6;--ok:#79dd8f;--ok-c:#00531f;--warn-c:#5c4300;--on-warn-c:#ffdea6;
+  --g1:#5c2a33;--g2:#5c3b20;--g3:#53480f;--g4:#2f4d27;--g5:#154d41;--g6:#1c4466;--g7:#413566;--g8:#5b2f55;
+  --shadow:0 1px 3px rgba(0,0,0,.6);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --primary:#4fd8eb;--on-primary:#00363d;--primary-c:#004f58;--on-primary-c:#97f0ff;
+  --secondary-c:#334b4f;--on-secondary-c:#cce8ec;--tertiary-c:#334863;--on-tertiary-c:#d3e4ff;
+  --surface:#0e1415;--surf-low:#161d1e;--surf:#1a2122;--surf-high:#252b2c;--surf-highest:#303637;
+  --on-surface:#dee3e5;--on-surface-v:#bfc8ca;--outline:#899294;--outline-v:#3f484a;
+  --error:#ffb4ab;--error-c:#93000a;--on-error-c:#ffdad6;--ok:#79dd8f;--ok-c:#00531f;--warn-c:#5c4300;--on-warn-c:#ffdea6;
+  --g1:#5c2a33;--g2:#5c3b20;--g3:#53480f;--g4:#2f4d27;--g5:#154d41;--g6:#1c4466;--g7:#413566;--g8:#5b2f55;
+  --shadow:0 1px 3px rgba(0,0,0,.6);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--surface);color:var(--on-surface);font:400 14px/1.6 var(--font);overflow-x:hidden}
+.ms{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;-webkit-font-smoothing:antialiased;flex:none;user-select:none}
+.ms.fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+.ms.sm{font-size:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+#app{display:grid;grid-template-columns:80px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:100%}
+#topbar{grid-column:1/3;display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);position:sticky;top:0;z-index:5;min-height:64px}
+#topbar h1{font:500 22px/28px var(--font);margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:10px}
+#topbar h1 .ms{color:var(--primary);font-size:28px}
+.icon-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;display:inline-grid;place-items:center;color:var(--on-surface-v);position:relative}
+.icon-btn:hover{background:color-mix(in srgb,var(--on-surface) 8%,transparent)}
+.icon-btn.on{background:var(--secondary-c);color:var(--on-secondary-c)}
+#rail{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 0;background:var(--surface);min-height:0;overflow-y:auto}
+.nav{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;width:72px;color:var(--on-surface-v);font-size:12px;font-weight:500;padding:0}
+.nav .pill{width:56px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .2s}
+.nav:hover .pill{background:color-mix(in srgb,var(--on-surface) 8%,transparent)}
+.nav.active{color:var(--on-surface)}
+.nav.active .pill{background:var(--secondary-c);color:var(--on-secondary-c)}
+.nav.active .ms{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+#main{min-width:0;min-height:0;overflow:auto;padding:8px 16px 96px;border-radius:28px 0 0 0;background:var(--surf-low)}
+.page{display:none;max-width:1180px;margin:0 auto;padding-top:16px}
+.page.active{display:block}
+.h-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.h-row h2{font:400 24px/32px var(--font);margin:0;flex:1;min-width:0}
+.sub{color:var(--on-surface-v);font-size:13px}
+.card{background:var(--surf);border-radius:16px;padding:16px;min-width:0}
+.card.outlined{background:transparent;border:1px solid var(--outline-v)}
+.card h3{font:500 16px/24px var(--font);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 24px;border-radius:20px;border:0;font-weight:500;font-size:14px;background:transparent;color:var(--primary);white-space:nowrap}
+.btn .ms{font-size:18px;margin-left:-8px}
+.btn.filled{background:var(--primary);color:var(--on-primary)}
+.btn.tonal{background:var(--secondary-c);color:var(--on-secondary-c)}
+.btn.outlined{border:1px solid var(--outline);color:var(--primary)}
+.btn.danger{color:var(--error)}
+.btn:hover{filter:brightness(1.08)}
+.btn.text:hover,.btn.outlined:hover{background:color-mix(in srgb,var(--primary) 8%,transparent);filter:none}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn.sm{height:32px;padding:0 16px;font-size:13px}
+.fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:6;height:56px;border-radius:16px;padding:0 20px 0 16px;border:0;background:var(--primary-c);color:var(--on-primary-c);display:flex;align-items:center;gap:12px;font-weight:500;font-size:15px;box-shadow:var(--shadow)}
+.fab .ms{font-size:24px}
+/* fields */
+.field{position:relative;display:block;min-width:0}
+.field>span{position:absolute;left:12px;top:-8px;padding:0 4px;background:var(--surf);font-size:12px;color:var(--on-surface-v);z-index:1}
+.dlg .field>span{background:var(--surf-high)}
+.field input,.field select,.field textarea{width:100%;min-height:48px;border-radius:4px;border:1px solid var(--outline);background:transparent;color:var(--on-surface);padding:10px 14px;font:inherit}
+.field textarea{resize:vertical;min-height:96px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--primary);outline-offset:-1px;border-color:var(--primary)}
+.field select option{background:var(--surf-high)}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--outline);background:transparent;font-size:13px;font-weight:500;color:var(--on-surface-v);white-space:nowrap}
+.chip.sel{background:var(--secondary-c);border-color:transparent;color:var(--on-secondary-c)}
+.chip.sel::before{content:'check';font-family:'Material Symbols Outlined';font-size:18px;margin-left:-4px}
+.chip.tag{height:22px;padding:0 8px;font-size:11px;border-radius:6px;background:var(--tertiary-c);color:var(--on-tertiary-c);border:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.scroll{max-height:200px;overflow:auto;padding:2px}
+/* segmented */
+.seg{display:inline-flex;border:1px solid var(--outline);border-radius:20px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:0 16px;height:38px;font-weight:500;color:var(--on-surface);display:flex;align-items:center;gap:6px;border-right:1px solid var(--outline)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--secondary-c);color:var(--on-secondary-c)}
+/* switch */
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer;min-height:40px}
+.switch input{appearance:none;width:52px;height:32px;border-radius:16px;border:2px solid var(--outline);background:var(--surf-highest);position:relative;flex:none;margin:0;transition:.2s;cursor:pointer}
+.switch input::after{content:'';position:absolute;left:6px;top:6px;width:16px;height:16px;border-radius:50%;background:var(--outline);transition:.2s}
+.switch input:checked{background:var(--primary);border-color:var(--primary)}
+.switch input:checked::after{left:24px;top:2px;width:24px;height:24px;top:2px;background:var(--on-primary)}
+.switch input:checked::after{left:22px}
+/* list */
+.list{display:flex;flex-direction:column}
+.li{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 12px;border-radius:12px;min-height:56px}
+.li:hover{background:color-mix(in srgb,var(--on-surface) 6%,transparent)}
+.li .avatar{width:40px;height:40px;border-radius:50%;background:var(--primary-c);color:var(--on-primary-c);display:grid;place-items:center;font-weight:700;flex:none}
+.li.absent .avatar{background:var(--surf-highest);color:var(--on-surface-v)}
+.li.absent .nm{text-decoration:line-through;color:var(--on-surface-v)}
+.li .nm{font-weight:500}
+.li .meta{display:flex;gap:4px;flex-wrap:wrap}
+.li .txt{flex:1;min-width:0}
+/* seat grid */
+.board{--cw:64px;--ch:52px;display:grid;gap:6px;justify-content:center;touch-action:none;user-select:none}
+.cell{width:var(--cw);height:var(--ch);border-radius:12px;display:grid;place-items:center;position:relative;font-size:12px;min-width:0}
+.cell.void{background:transparent;border:1px dashed var(--outline-v);opacity:.45}
+.cell.seat{background:var(--surf-highest);color:var(--on-surface)}
+.cell .no{position:absolute;left:5px;top:2px;font-size:10px;opacity:.65;font-variant-numeric:tabular-nums}
+.cell[data-g="1"]{background:var(--g1)}.cell[data-g="2"]{background:var(--g2)}.cell[data-g="3"]{background:var(--g3)}.cell[data-g="4"]{background:var(--g4)}
+.cell[data-g="5"]{background:var(--g5)}.cell[data-g="6"]{background:var(--g6)}.cell[data-g="7"]{background:var(--g7)}.cell[data-g="8"]{background:var(--g8)}
+.cell.pick{outline:3px solid var(--primary);outline-offset:-1px}
+.cell.pickno{outline:3px solid var(--error);outline-offset:-1px;background-image:repeating-linear-gradient(45deg,transparent 0 6px,color-mix(in srgb,var(--error) 25%,transparent) 6px 12px)}
+.cell.dim{opacity:.35}
+.teacher{margin:0 auto 12px;width:min(320px,70%);text-align:center;border-radius:12px;background:var(--tertiary-c);color:var(--on-tertiary-c);padding:6px 12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}
+.board-wrap{overflow:auto;padding:4px 2px 8px}
+.board-wrap .board{width:max-content;margin:0 auto}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* result cards */
+.res{--cw:96px;--ch:72px}
+.res .cell{border-radius:14px;cursor:pointer;transition:transform .2s,box-shadow .2s;padding:4px;text-align:center;line-height:1.25}
+.res .cell:hover{box-shadow:var(--shadow)}
+.res .cell .n{font-weight:700;font-size:var(--nfs,15px);word-break:break-all;display:block}
+.res .cell .tg{font-size:10px;opacity:.75}
+.res .cell.empty{opacity:.5}
+.res .cell.lock::after{content:'lock';font-family:'Material Symbols Outlined';position:absolute;right:3px;top:2px;font-size:14px;color:var(--primary)}
+.res .cell.bad{outline:2px solid var(--error);outline-offset:-2px}
+.res .cell.hidden .n{filter:blur(6px)}
+.res .cell.flip{animation:flip .5s}
+@keyframes flip{from{transform:rotateY(90deg) scale(.9)}to{transform:none}}
+.res .cell.roll{box-shadow:inset 0 0 0 2px var(--primary)}
+.res.fs{--cw:clamp(90px,9vw,150px);--ch:clamp(64px,8vh,100px);--nfs:clamp(16px,2vw,26px)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--on-surface-v)}
+/* checks */
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;border-bottom:1px solid var(--outline-v)}
+.check:last-child{border:0}
+.check .ms.ok{color:var(--ok)}.check .ms.ng{color:var(--error)}.check .ms.soft{color:#b26a00}
+.banner{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;background:var(--error-c);color:var(--on-error-c)}
+.banner.warn{background:var(--warn-c);color:var(--on-warn-c)}
+.banner.info{background:var(--tertiary-c);color:var(--on-tertiary-c)}
+.empty-state{text-align:center;padding:32px 16px;color:var(--on-surface-v)}
+.empty-state .ms{font-size:48px;opacity:.6}
+/* dialog */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:grid;place-items:center;padding:16px}
+.dlg{background:var(--surf-high);color:var(--on-surface);border-radius:28px;width:min(640px,100%);max-height:calc(100% - 16px);display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.35)}
+.dlg>header{padding:24px 24px 8px;font:400 24px/32px var(--font);display:flex;align-items:center;gap:12px}
+.dlg>.body{padding:8px 24px 16px;overflow:auto;display:flex;flex-direction:column;gap:20px;min-height:0}
+.dlg>footer{padding:16px 24px 24px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.lbl{font-size:12px;font-weight:500;color:var(--on-surface-v);letter-spacing:.04em;margin-bottom:6px}
+.sentence{padding:12px 16px;border-radius:12px;background:var(--primary-c);color:var(--on-primary-c);font-weight:500}
+/* rule cards */
+.rule{display:flex;gap:12px;align-items:flex-start;padding:12px 8px 12px 16px;border-radius:16px;background:var(--surf-high)}
+.rule.off{opacity:.55}
+.rule .ico{width:40px;height:40px;border-radius:12px;background:var(--tertiary-c);color:var(--on-tertiary-c);display:grid;place-items:center;flex:none}
+.rule .ico.soft{background:var(--warn-c);color:var(--on-warn-c)}
+.rule .txt{flex:1;min-width:0}
+.rule .txt b{font-weight:700}
+.badge{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;font-size:11px;font-weight:700;background:var(--error-c);color:var(--on-error-c);margin-right:6px}
+.badge.soft{background:var(--warn-c);color:var(--on-warn-c)}
+.snack{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--on-surface);color:var(--surface);padding:12px 20px;border-radius:8px;z-index:30;max-width:calc(100% - 32px);font-size:14px;box-shadow:var(--shadow)}
+.hist{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--surf-high)}
+.mini{--cw:14px;--ch:10px;gap:2px}
+.mini .cell{border-radius:3px}
+.mini .cell .no{display:none}
+pre.out{white-space:pre;overflow:auto;background:var(--surf-highest);border-radius:12px;padding:12px;margin:0;font:12px/1.5 ui-monospace,Menlo,Consolas,'Noto Sans JP',monospace;max-height:280px}
+.kbd{font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--primary)}
+@media (max-width:719px){
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+  #topbar{grid-column:1}
+  #rail{flex-direction:row;justify-content:space-around;gap:0;padding:12px 4px calc(16px + env(safe-area-inset-bottom,0px));background:var(--surf);grid-row:3;overflow:visible}
+  .nav{width:auto;flex:1;min-width:0}
+  #main{border-radius:24px 24px 0 0;padding-inline:12px}
+  .fab{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+  .snack{bottom:calc(168px + env(safe-area-inset-bottom,0px))}
+  .res{--cw:min(72px,calc((100vw - 76px - 6px*(var(--cols,6) - 1))/var(--cols,6)));--ch:52px}
+  .res .cell .n{font-size:min(var(--nfs,15px),12px)}
+  .res .cell .tg{display:none}
+  .board:not(.res){--cw:min(52px,calc((100vw - 76px - 6px*(var(--cols,6) - 1))/var(--cols,6)));--ch:42px}
+  .dlg>header,.dlg>.body,.dlg>footer{padding-inline:16px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.star{position:absolute;right:4px;bottom:2px;font-size:14px!important;color:#e0a100}
+.tray{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--surf-high)}
+.res .cell.dragover{outline:3px dashed var(--primary);outline-offset:-2px}
+.res .cell[draggable=true]{cursor:grab}
+.cand{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:var(--surf-highest);min-width:0}
+.cand .board{--ch:calc(var(--cw)*.7);gap:3px;overflow:hidden;justify-content:flex-start}
+.cand .cell{border-radius:5px;font-size:var(--cf,9px);line-height:1.1;padding:0;overflow:hidden;white-space:nowrap}
+.pv{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--outline-v);background:#fff}
+#printSheet{display:none}
+@media print{
+  html,body{height:auto!important;overflow:visible!important;background:#fff!important}
+  #app,#overlay,#snackHost,.fab{display:none!important}
+  #printSheet{display:block!important}
+  #printSheet img{width:100%;max-height:calc(100vh - 8mm);object-fit:contain}
+}
+</style>
+</head><body>
+<div id="app">
+  <header id="topbar">
+    <h1><span class="ms fill">event_seat</span><span>席替えスタジオ</span></h1>
+    <button class="icon-btn" id="btnTheme" title="テーマ切替" aria-label="テーマ切替"><span class="ms">brightness_6</span></button>
+    <button class="icon-btn" id="btnFs" title="全画面表示" aria-label="全画面表示"><span class="ms">fullscreen</span></button>
+  </header>
+  <nav id="rail" aria-label="メインナビゲーション">
+    <button class="nav active" data-page="shuffle"><span class="pill"><span class="ms">shuffle</span></span>席替え</button>
+    <button class="nav" data-page="members"><span class="pill"><span class="ms">group</span></span>名前</button>
+    <button class="nav" data-page="layout"><span class="pill"><span class="ms">grid_view</span></span>レイアウト</button>
+    <button class="nav" data-page="rules"><span class="pill"><span class="ms">rule</span></span>条件</button>
+    <button class="nav" data-page="data"><span class="pill"><span class="ms">history</span></span>履歴・出力</button>
+  </nav>
+  <main id="main">
+    <section class="page active" id="page-shuffle"></section>
+    <section class="page" id="page-members"></section>
+    <section class="page" id="page-layout"></section>
+    <section class="page" id="page-rules"></section>
+    <section class="page" id="page-data"></section>
+  </main>
+</div>
+<div id="overlay"></div>
+<div id="printSheet"></div>
+<div id="snackHost"></div>
+<script>
+/* ===== Core: state, helpers, solver ===== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const ROLES = ['学級委員', '副学級委員', '班長', '書記', '会計', '保健'];
+const REL = {
+  four: { label: '前後左右', fn: (dr, dc) => Math.abs(dr) + Math.abs(dc) === 1 },
+  lr: { label: '左右(隣)', fn: (dr, dc) => dr === 0 && Math.abs(dc) === 1 },
+  fb: { label: '前後', fn: (dr, dc) => dc === 0 && Math.abs(dr) === 1 },
+  eight: { label: '周囲8マス(斜め含む)', fn: (dr, dc) => Math.max(Math.abs(dr), Math.abs(dc)) === 1 },
+  diag: { label: '斜め', fn: (dr, dc) => Math.abs(dr) === 1 && Math.abs(dc) === 1 },
+  front: { label: '真後ろ(Bの前にA)', fn: (dr, dc) => dr === -1 && dc === 0, dir: true },
+  back: { label: 'Bの真後ろにA', fn: (dr, dc) => dr === 1 && dc === 0, dir: true },
+  left: { label: 'Bの左にA', fn: (dr, dc) => dr === 0 && dc === -1, dir: true },
+  right: { label: 'Bの右にA', fn: (dr, dc) => dr === 0 && dc === 1, dir: true },
+};
+REL.front.label = 'Bの真前にA';
+
+/* ----- layouts ----- */
+function makeLayout(kind, rows, cols) {
+  const cells = Array.from({ length: rows * cols }, () => ({ s: 1, g: 0 }));
+  const set = (r, c, s) => { if (r >= 0 && r < rows && c >= 0 && c < cols) cells[r * cols + c].s = s; };
+  if (kind === 'aisle') { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (c % 3 === 2) set(r, c, 0); }
+  if (kind === 'island') {
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (c % 3 === 2 || r % 3 === 2) set(r, c, 0);
+      else cells[r * cols + c].g = 1 + Math.floor(r / 3) * Math.ceil(cols / 3) + Math.floor(c / 3);
+    }
+  }
+  if (kind === 'zigzag') { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if ((r + c) % 2) set(r, c, 0); }
+  if (kind === 'u') { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (!(c === 0 || c === cols - 1 || r === rows - 1)) set(r, c, 0); }
+  if (kind === 'pairs') { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { if (c % 3 === 2) set(r, c, 0); else cells[r * cols + c].g = 1 + Math.floor(c / 3); } }
+  return { rows, cols, cells, teacher: true };
+}
+function resizeLayout(L, rows, cols) {
+  const cells = Array.from({ length: rows * cols }, (_, i) => {
+    const r = Math.floor(i / cols), c = i % cols;
+    return (r < L.rows && c < L.cols) ? { ...L.cells[r * L.cols + c] } : { s: 1, g: 0 };
+  });
+  return { ...L, rows, cols, cells };
+}
+
+/* ----- sample data ----- */
+const SAMPLE_NAMES = [['青木', '男子'], ['伊藤', '女子'], ['上田', '男子'], ['遠藤', '女子'], ['大野', '男子'], ['加藤', '女子'], ['木村', '男子'], ['工藤', '女子'], ['小林', '男子'], ['斉藤', '女子'], ['佐藤', '女子'], ['清水', '男子'], ['鈴木', '男子'], ['高橋', '女子'], ['田中', '男子'], ['中村', '女子'], ['西田', '男子'], ['野口', '女子'], ['橋本', '男子'], ['林', '女子'], ['原田', '男子'], ['福田', '女子'], ['堀', '男子'], ['松本', '女子'], ['宮崎', '男子'], ['森', '女子'], ['山田', '男子'], ['吉田', '女子'], ['渡辺', '男子'], ['和田', '女子']];
+function sampleState() {
+  const members = SAMPLE_NAMES.map(([n, g]) => ({ id: uid(), name: n, tags: [g], absent: false }));
+  const byName = n => members.find(m => m.name === n);
+  byName('上田').tags.push('視力'); byName('遠藤').tags.push('視力'); byName('小林').tags.push('班長'); byName('伊藤').tags.push('班長'); byName('青木').tags.push('学級委員'); byName('伊藤').tags.push('学級委員');
+  const layout = makeLayout('aisle', 5, 8); layout.cells.forEach(c => { /* 5x8 with aisles => 30 seats */ });
+  layout.cells.forEach((c, i) => { if (i % 8 === 2 || i % 8 === 5) c.s = 0; });
+  layout.cells.forEach((c, i) => { if (c.s) c.g = 1 + Math.floor((i % 8) / 3); });
+  const rules = [
+    { id: uid(), type: 'area', on: true, hard: true, w: 5, A: { p: [], t: ['視力'] }, mode: 'in', seats: [] , preset: 'front2' },
+    { id: uid(), type: 'apart', on: true, hard: false, w: 6, A: { p: [], t: ['男子'] }, B: { p: [], t: ['男子'] }, rel: 'lr' },
+    { id: uid(), type: 'apart', on: true, hard: false, w: 6, A: { p: [], t: ['女子'] }, B: { p: [], t: ['女子'] }, rel: 'lr' },
+    { id: uid(), type: 'dist', on: true, hard: true, w: 5, A: { p: [byName('木村').id], t: [] }, B: { p: [byName('小林').id], t: [] }, op: 'min', n: 3, metric: 'man' },
+    { id: uid(), type: 'near', on: true, hard: true, w: 5, A: { p: [byName('田中').id], t: [] }, B: { p: [byName('佐藤').id], t: [] }, rel: 'four' },
+    { id: uid(), type: 'spread', on: true, hard: false, w: 4, A: { p: [], t: ['班長'] }, by: 'group' },
+    { id: uid(), type: 'spread', on: true, hard: false, w: 5, A: { p: [], t: ['学級委員'] }, by: 'group' },
+  ];
+  return { members, layout, rules, sample: true };
+}
+function defaultState() {
+  const s = sampleState();
+  // 'area' rule with preset: resolve seats now (front 2 seat-rows)
+  s.rules[0].seats = seatsByPreset(s.layout, 'front2');
+  return {
+    v: 1, ...s,
+    settings: { avoidSame: true, wSame: 6, avoidNb: true, wNb: 4, histN: 3, fair: false, wFair: 4, seed: '', anim: 'roll', fillOrder: 'back', nameSize: 15, ignoreRules: false, sound: false },
+    result: null, history: [], view: 'teacher', page: 'shuffle',
+  };
+}
+function seatsByPreset(L, kind) {
+  const idx = []; const seatRows = [...new Set(L.cells.map((c, i) => c.s ? Math.floor(i / L.cols) : -1).filter(r => r >= 0))].sort((a, b) => a - b);
+  const seatCols = [...new Set(L.cells.map((c, i) => c.s ? i % L.cols : -1).filter(r => r >= 0))].sort((a, b) => a - b);
+  L.cells.forEach((c, i) => {
+    if (!c.s) return; const r = Math.floor(i / L.cols), col = i % L.cols;
+    const ri = seatRows.indexOf(r), ci = seatCols.indexOf(col), nr = seatRows.length, nc = seatCols.length;
+    const ok = {
+      front1: ri < 1, front2: ri < 2, front3: ri < 3, back1: ri >= nr - 1, back2: ri >= nr - 2, back3: ri >= nr - 3,
+      left1: ci < 1, left2: ci < 2, right1: ci >= nc - 1, right2: ci >= nc - 2,
+      centerCol: ci >= Math.floor(nc / 3) && ci < Math.ceil(nc * 2 / 3), edgeCol: ci === 0 || ci === nc - 1,
+      frontHalf: ri < Math.ceil(nr / 2), backHalf: ri >= Math.floor(nr / 2), all: true,
+    }[kind];
+    if (ok) idx.push(i);
+  });
+  return idx;
+}
+
+/* ----- subject resolution ----- */
+function resolveSel(sel, members) {
+  if (!sel) return [];
+  const out = new Set();
+  (sel.p || []).forEach(id => out.add(id));
+  members.forEach(m => { if (sel.t && sel.t.some(t => m.tags.includes(t))) out.add(m.id); });
+  return [...out];
+}
+
+/* ----- solver ----- */
+function rngFrom(seed) {
+  let a = 0;
+  if (seed !== '' && seed != null) { for (const ch of String(seed)) a = (a * 31 + ch.charCodeAt(0)) >>> 0; }
+  else a = (Math.random() * 4294967296) >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+/**
+ * model = {members:[{id,name,tags,absent}], layout, rules, settings, history, lockedSeats:{cellIdx:memberId}}
+ * returns {assign:{cellIdx:memberId|null}, hardViol, cost, report:[...], errors:[...], ok}
+ */
+function buildProblem(model) {
+  const L = model.layout;
+  const seatCells = []; L.cells.forEach((c, i) => { if (c.s) seatCells.push(i); });
+  const S = seatCells.length;
+  const present = model.members.filter(m => !m.absent);
+  const N = present.length;
+  const errors = [];
+  if (N > S) errors.push(`座席が${N - S}席足りません（出席${N}名 / 座席${S}席）。レイアウトで席を増やすか、欠席にしてください。`);
+  const midx = {}; present.forEach((m, i) => midx[m.id] = i);
+  const R = seatCells.map(i => Math.floor(i / L.cols)), C = seatCells.map(i => i % L.cols), G = seatCells.map(i => L.cells[i].g);
+  const kOfCell = {}; seatCells.forEach((ci, k) => kOfCell[ci] = k);
+  const locks = {}; // member index -> seat k
+  const lockedSeat = new Set();
+  const lockNote = [];
+  const addLock = (mi, k, src) => {
+    if (mi == null || k == null) return;
+    if (locks[mi] != null && locks[mi] !== k) { errors.push(`${present[mi].name} の固定席が複数あり矛盾しています（${src}）。`); return; }
+    if (lockedSeat.has(k) && locks[mi] !== k) { errors.push(`同じ席に複数人が固定されています（${src}）。`); return; }
+    locks[mi] = k; lockedSeat.add(k);
+  };
+  const rules = [];
+  const adj4 = [];
+  for (let a = 0; a < S; a++) for (let b = a + 1; b < S; b++) { if (Math.abs(R[a] - R[b]) + Math.abs(C[a] - C[b]) === 1) adj4.push([a, b]); }
+  const pairsOf = (A, B) => {
+    const out = [], seen = new Set();
+    const bb = (B && B.length) ? B : A;
+    for (const a of A) for (const b of bb) { if (a === b) continue; const k = a < b ? a + '_' + b : b + '_' + a; if (seen.has(k)) continue; seen.add(k); out.push([a, b]); }
+    return out;
+  };
+  for (const r of model.rules) {
+    if (!r.on) continue;
+    const A = resolveSel(r.A, present).map(id => midx[id]).filter(v => v != null);
+    const B = resolveSel(r.B, present).map(id => midx[id]).filter(v => v != null);
+    const hard = r.type === 'fix' ? true : r.hard;
+    const weight = hard ? 1000 : 10 * (r.w || 5);
+    let f = null, total = 0;
+    if (r.type === 'fix') {
+      const k = kOfCell[r.seat];
+      if (k == null) { errors.push('固定先の席が存在しません。条件を確認してください。'); continue; }
+      A.forEach(mi => addLock(mi, k, 'ルール'));
+      f = (so, out) => { let v = 0; A.forEach(mi => { if (so[mi] !== k) { v++; out && out.push([mi]); } }); return v; };
+      total = A.length;
+    } else if (r.type === 'area') {
+      const set = new Set((r.seats || []).map(ci => kOfCell[ci]).filter(k => k != null));
+      const inn = r.mode === 'in';
+      if (inn && set.size < A.length) errors.push(`「${describeSel(r.A, model.members)}」を入れる席が足りません（範囲${set.size}席 / 人数${A.length}名）。`);
+      f = (so, out) => { let v = 0; A.forEach(mi => { if (set.has(so[mi]) !== inn) { v++; out && out.push([mi]); } }); return v; };
+      total = A.length;
+    } else if (r.type === 'near') {
+      const fn = REL[r.rel].fn;
+      const AA = A.filter(a => B.some(b => b !== a));
+      f = (so, out) => { let v = 0; for (const a of AA) { let ok = false; for (const b of B) { if (b === a) continue; if (fn(R[so[a]] - R[so[b]], C[so[a]] - C[so[b]])) { ok = true; break; } } if (!ok) { v++; out && out.push([a, ...B.filter(x => x !== a)]); } } return v; };
+      total = AA.length;
+    } else if (r.type === 'apart') {
+      const fn = REL[r.rel].fn; const P = pairsOf(A, B);
+      f = (so, out) => { let v = 0; for (const [a, b] of P) { if (fn(R[so[a]] - R[so[b]], C[so[a]] - C[so[b]]) || fn(R[so[b]] - R[so[a]], C[so[b]] - C[so[a]])) { v++; out && out.push([a, b]); } } return v; };
+      total = P.length;
+    } else if (r.type === 'dist') {
+      const P = pairsOf(A, B); const n = r.n, man = r.metric === 'man', min = r.op === 'min';
+      const d = (a, b) => man ? Math.abs(R[a] - R[b]) + Math.abs(C[a] - C[b]) : Math.max(Math.abs(R[a] - R[b]), Math.abs(C[a] - C[b]));
+      f = (so, out) => { let v = 0; for (const [a, b] of P) { const x = d(so[a], so[b]); if (min ? x < n : x > n) { v++; out && out.push([a, b]); } } return v; };
+      total = P.length;
+    } else if (r.type === 'line') {
+      const P = pairsOf(A, B); const k = r.kind;
+      f = (so, out) => { let v = 0; for (const [a, b] of P) { const sa = so[a], sb = so[b]; const ok = k === 'sameRow' ? R[sa] === R[sb] : k === 'sameCol' ? C[sa] === C[sb] : k === 'diffRow' ? R[sa] !== R[sb] : C[sa] !== C[sb]; if (!ok) { v++; out && out.push([a, b]); } } return v; };
+      total = P.length;
+    } else if (r.type === 'group') {
+      const P = pairsOf(A, B); const same = r.kind === 'same';
+      f = (so, out) => { let v = 0; for (const [a, b] of P) { const ga = G[so[a]], gb = G[so[b]]; const eq = ga > 0 && ga === gb; if (eq !== same) { v++; out && out.push([a, b]); } } return v; };
+      total = P.length;
+    } else if (r.type === 'spread') {
+      const key = r.by === 'group' ? G : r.by === 'row' ? R : C;
+      const keys = new Set(key.filter((g, i) => r.by !== 'group' || g > 0));
+      const K = Math.max(1, keys.size), target = Math.ceil(A.length / K);
+      f = (so, out) => { const cnt = new Map(); for (const a of A) { const g = key[so[a]]; if (r.by === 'group' && g === 0) continue; cnt.set(g, (cnt.get(g) || 0) + 1); } let v = 0; cnt.forEach((c, g) => { if (c > target) { v += c - target; if (out) out.push(A.filter(a => key[so[a]] === g)); } }); return v; };
+      total = A.length;
+    }
+    if (f && total > 0) rules.push({ rule: r, f, hard, weight, total });
+  }
+  // history penalties
+  const st = model.settings, hist = (model.history || []).filter(h => h.rows === L.rows && h.cols === L.cols);
+  const lastN = hist.slice(0, st.histN);
+  const prevSeat = {}; // member id -> Set of cell idx
+  lastN.forEach(h => { for (const [ci, id] of Object.entries(h.assign)) if (id) (prevSeat[id] ||= new Set()).add(+ci); });
+  const prevPairs = new Set();
+  if (hist[0]) { for (const [a, b] of (function* () { const as = hist[0].assign; for (let i = 0; i < L.cells.length; i++) { const r = Math.floor(i / L.cols), c = i % L.cols; for (const j of [i + 1, i + L.cols]) { if (j >= L.cells.length) continue; if (j === i + 1 && c === L.cols - 1) continue; if (as[i] && as[j]) yield [as[i], as[j]]; } } })()) prevPairs.add(a < b ? a + '|' + b : b + '|' + a); }
+  const counts = { front: {}, back: {} };
+  const seatRowsU = [...new Set(R)].sort((a, b) => a - b); const frontR = seatRowsU[0], backR = seatRowsU[seatRowsU.length - 1];
+  (model.history || []).forEach(h => { if (h.rows !== L.rows || h.cols !== L.cols) return; const rs = [...new Set(Object.keys(h.assign).filter(ci => L.cells[ci] && L.cells[ci].s).map(ci => Math.floor(ci / L.cols)))].sort((a, b) => a - b); for (const [ci, id] of Object.entries(h.assign)) { if (!id) continue; const r = Math.floor(ci / L.cols); if (r === rs[0]) counts.front[id] = (counts.front[id] || 0) + 1; if (r === rs[rs.length - 1]) counts.back[id] = (counts.back[id] || 0) + 1; } });
+  const hcost = (so) => {
+    let c = 0;
+    if (st.avoidSame) for (let m = 0; m < N; m++) { const ps = prevSeat[present[m].id]; if (ps && ps.has(seatCells[so[m]])) c += st.wSame * 4; }
+    if (st.avoidNb && prevPairs.size) { const occ = new Array(S).fill(-1); for (let m = 0; m < N; m++) occ[so[m]] = m; for (const [a, b] of adj4) { const x = occ[a], y = occ[b]; if (x < 0 || y < 0) continue; const i1 = present[x].id, i2 = present[y].id; if (prevPairs.has(i1 < i2 ? i1 + '|' + i2 : i2 + '|' + i1)) c += st.wNb * 3; } }
+    if (st.fair) for (let m = 0; m < N; m++) { const r = R[so[m]]; if (r === frontR) c += st.wFair * 2 * (counts.front[present[m].id] || 0); if (r === backR && frontR !== backR) c += st.wFair * 2 * (counts.back[present[m].id] || 0); }
+    return c;
+  };
+  (model.lockedSeats ? Object.entries(model.lockedSeats) : []).forEach(([ci, id]) => { const mi = midx[id]; const k = kOfCell[ci]; if (mi != null && k != null) addLock(mi, k, 'ピン留め'); });
+  const cost = (so) => { let c = hcost(so); for (const r of rules) { const v = r.f(so, null); if (v) c += v * r.weight; } return c; };
+  return { present, N, S, seatCells, R, C, G, rules, locks, lockedSeat, errors, cost, midx, kOfCell, hcost, adj4 };
+}
+
+function solve(model, { timeMs = 900 } = {}) {
+  const P = buildProblem(model);
+  if (P.errors.length && P.N > P.S) return { ok: false, errors: P.errors, P };
+  const { N, S, locks, lockedSeat } = P;
+  const rnd = rngFrom(model.settings.seed);
+  const freeM = [], freeS = [];
+  for (let m = 0; m < N; m++) if (locks[m] == null) freeM.push(m);
+  for (let k = 0; k < S; k++) if (!lockedSeat.has(k)) freeS.push(k);
+  let best = null, bestC = Infinity;
+  const t0 = performance.now ? performance.now() : Date.now();
+  const now = () => performance.now ? performance.now() : Date.now();
+  let restarts = 0;
+  while (restarts < 30) {
+    restarts++;
+    const so = new Array(N), occ = new Array(S).fill(-1);
+    for (let m = 0; m < N; m++) if (locks[m] != null) { so[m] = locks[m]; occ[locks[m]] = m; }
+    const seats = freeS.slice(); for (let i = seats.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [seats[i], seats[j]] = [seats[j], seats[i]]; }
+    freeM.forEach((m, i) => { so[m] = seats[i]; occ[seats[i]] = m; });
+    let c = P.cost(so), bc = c, bso = so.slice();
+    const iters = 6000 + N * 500, T0 = 400, T1 = 2;
+    for (let it = 0; it < iters && c > 0 && freeM.length; it++) {
+      const T = T0 * Math.pow(T1 / T0, it / iters);
+      const m = freeM[Math.floor(rnd() * freeM.length)];
+      const k = freeS[Math.floor(rnd() * freeS.length)];
+      const k0 = so[m]; if (k === k0) continue;
+      const m2 = occ[k];
+      so[m] = k; if (m2 >= 0) so[m2] = k0;
+      const nc = P.cost(so);
+      if (nc <= c || rnd() < Math.exp((c - nc) / T)) {
+        c = nc; occ[k] = m; occ[k0] = m2; if (c < bc) { bc = c; bso = so.slice(); }
+      } else { so[m] = k0; if (m2 >= 0) so[m2] = k; }
+    }
+    if (bc < bestC) { bestC = bc; best = bso; }
+    if (bestC === 0 || now() - t0 > timeMs) break;
+  }
+  const assign = {};
+  P.seatCells.forEach(ci => assign[ci] = null);
+  best.forEach((k, m) => assign[P.seatCells[k]] = P.present[m].id);
+  const rep = evaluate(model, assign);
+  return { ok: rep.hardViol === 0, assign, cost: bestC, report: rep.report, hardViol: rep.hardViol, bad: rep.bad, errors: P.errors, restarts };
+}
+
+function evaluate(model, assign) {
+  const P = buildProblem({ ...model, lockedSeats: null, history: [] });
+  const so = new Array(P.N).fill(-1);
+  for (const [ci, id] of Object.entries(assign)) { if (!id) continue; const mi = P.midx[id], k = P.kOfCell[ci]; if (mi != null && k != null) so[mi] = k; }
+  let ex = 0; for (let m = 0; m < P.N; m++) if (so[m] < 0) { const k = P.S + ex; ex++; P.R[k] = 1e6 + ex * 10; P.C[k] = 1e6; P.G[k] = 0; so[m] = k; }
+  let hardViol = 0; const bad = new Set(); const report = [];
+  for (const r of P.rules) {
+    const out = []; const v = r.f(so, out);
+    if (v && r.hard) hardViol += v;
+    out.forEach(g => g.forEach(mi => bad.add(P.present[mi].id)));
+    report.push({ rule: r.rule, viol: v, total: r.total, hard: r.hard, members: out.map(g => g.map(mi => P.present[mi].name)) });
+  }
+  return { report, hardViol, bad };
+}
+function describeSel(sel, members) {
+  if (!sel) return '';
+  const parts = [];
+  (sel.p || []).forEach(id => { const m = members.find(x => x.id === id); if (m) parts.push(m.name); });
+  (sel.t || []).forEach(t => parts.push(`［${t}］`));
+  return parts.join('・') || '（未選択）';
+}
+/* ===== UI shell ===== */
+const LS = 'sekigae.studio.v1';
+let S = (() => { try { const r = localStorage.getItem(LS); if (r) { const o = JSON.parse(r); if (o && o.v === 1) return o; } } catch (e) { } return defaultState(); })();
+function save() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { } }
+let sel = null, hiddenSet = new Set(), rolling = null, timers = [], lastFail = null, mode = 'swap', fsOn = false;
+const caps = { sample: null, downloads: null };
+
+function snack(msg, ms = 2600) {
+  const host = $('#snackHost'); host.innerHTML = `<div class="snack" role="status">${esc(msg)}</div>`;
+  clearTimeout(snack.t); snack.t = setTimeout(() => host.innerHTML = '', ms);
+}
+async function copyText(t, okMsg = 'コピーしました') {
+  try { await navigator.clipboard.writeText(t); snack(okMsg); return true; } catch (e) { }
+  const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) { } ta.remove();
+  snack(ok ? okMsg : 'コピーできませんでした。表示された文字を選択してコピーしてください'); return ok;
+}
+
+function dialog({ title, icon, body, actions = [], wide }) {
+  const host = $('#overlay');
+  const el = document.createElement('div'); el.className = 'scrim';
+  el.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}" style="${wide ? 'width:min(820px,100%)' : ''}"><header>${icon ? `<span class="ms" style="color:var(--primary)">${icon}</span>` : ''}<span class="grow">${esc(title)}</span></header><div class="body">${body}</div><footer></footer></div>`;
+  host.appendChild(el);
+  const close = () => { el.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  el.addEventListener('mousedown', e => { if (e.target === el) close(); });
+  const ft = $('footer', el);
+  actions.forEach(a => {
+    const b = document.createElement('button'); b.className = 'btn ' + (a.kind || 'text'); b.innerHTML = (a.icon ? `<span class="ms">${a.icon}</span>` : '') + esc(a.label);
+    b.onclick = async () => { const r = a.onClick ? await a.onClick(el) : undefined; if (r !== false) close(); };
+    ft.appendChild(b);
+  });
+  const first = $('input,textarea,select', el); if (first) first.focus();
+  return { el, close };
+}
+function confirmDlg(msg, okLabel, onOk, danger = true) {
+  dialog({ title: '確認', icon: 'help', body: `<div>${esc(msg)}</div>`, actions: [{ label: 'キャンセル' }, { label: okLabel, kind: danger ? 'filled' : 'filled', onClick: () => { onOk(); } }] });
+}
+
+/* ----- navigation ----- */
+function setPage(p) {
+  S.page = p; save();
+  $$('.nav').forEach(b => b.classList.toggle('active', b.dataset.page === p));
+  $$('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + p));
+  renderPage(p);
+  $('#main').scrollTop = 0;
+}
+function renderPage(p = S.page) { ({ shuffle: renderShuffle, members: renderMembers, layout: renderLayout, rules: renderRules, data: renderData }[p])(); }
+function seatNumbers() { const m = {}; let n = 0; S.layout.cells.forEach((c, i) => { if (c.s) m[i] = ++n; }); return m; }
+const seatCount = () => S.layout.cells.filter(c => c.s).length;
+const presentList = () => S.members.filter(m => !m.absent);
+const allTags = () => [...new Set(S.members.flatMap(m => m.tags))];
+const memberById = id => S.members.find(m => m.id === id);
+const modelNow = (extra = {}) => ({ members: S.members, layout: S.layout, rules: S.rules, settings: S.settings, history: S.history, lockedSeats: null, ...extra });
+
+/* ===== Shuffle page ===== */
+function renderShuffle() {
+  const el = $('#page-shuffle'); const st = S.settings;
+  const n = presentList().length, seats = seatCount();
+  el.innerHTML = `
+  <div class="h-row"><h2>席替え</h2>
+    <span class="sub">出席 <b class="kbd">${n}</b>名 ／ 座席 <b class="kbd">${seats}</b>席 ／ 有効な条件 <b class="kbd">${S.rules.filter(r => r.on).length}</b>件</span>
+    <div class="seg" id="viewSeg"><button data-v="teacher" class="${S.view === 'teacher' ? 'on' : ''}"><span class="ms sm">podium</span>先生側から</button><button data-v="student" class="${S.view === 'student' ? 'on' : ''}"><span class="ms sm">school</span>生徒側から</button></div>
+  </div>
+  <div id="banners" class="stack" style="margin-bottom:16px"></div>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+    <div class="stack" style="grid-column:1/-1">
+      <div class="card" id="resCard">
+        <div class="row" style="margin-bottom:8px">
+          <div class="seg" id="modeSeg"><button data-m="swap" class="${mode === 'swap' ? 'on' : ''}"><span class="ms sm">swap_horiz</span>入れ替え</button><button data-m="lock" class="${mode === 'lock' ? 'on' : ''}"><span class="ms sm">lock</span>ピン留め</button><button data-m="edit" class="${mode === 'edit' ? 'on' : ''}"><span class="ms sm">edit</span>手動配置</button></div><button class="icon-btn" id="btnUndo" title="元に戻す (Ctrl+Z)"><span class="ms">undo</span></button><button class="icon-btn" id="btnRedo" title="やり直す (Ctrl+Shift+Z)"><span class="ms">redo</span></button>
+          <span class="grow"></span>
+          <button class="btn text sm" id="btnCand"><span class="ms">view_carousel</span>候補を比較</button><button class="btn text sm" id="btnPic"><span class="ms">image</span>画像・印刷</button><button class="btn text sm" id="btnRevealAll"><span class="ms">visibility</span>全て公開</button>
+          <button class="btn text sm" id="btnPresent"><span class="ms">cast</span>投影表示</button>
+        </div>
+        <div id="boardHost"></div>
+        <div class="legend" id="legend" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="card"><h3><span class="ms">fact_check</span>条件チェック</h3><div id="checks"></div></div>
+    <div class="card stack" id="setCard"></div>
+  </div>
+  <button class="fab" id="fabShuffle"><span class="ms">shuffle</span>席替えを実行</button>`;
+  $('#viewSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.v; save(); renderShuffle(); };
+  $('#modeSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; mode = b.dataset.m; sel = null; renderShuffle(); };
+  $('#fabShuffle').onclick = runShuffle;
+  $('#btnRevealAll').onclick = () => { hiddenSet.clear(); drawBoard(); };
+  $('#btnPresent').onclick = togglePresent; $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo; $('#btnCand').onclick = candidatesDialog; $('#btnPic').onclick = pictureDialog; updUndo();
+  renderBanners(); drawBoard(); renderChecks(); renderSettings();
+}
+function renderBanners() {
+  const host = $('#banners'); if (!host) return; const out = [];
+  const n = presentList().length, seats = seatCount();
+  if (n > seats) out.push(`<div class="banner"><span class="ms">error</span><div><b>座席が足りません。</b> 出席${n}名に対して座席は${seats}席です。「レイアウト」で席を増やしてください。</div></div>`);
+  if (n === 0) out.push(`<div class="banner warn"><span class="ms">info</span><div>出席しているメンバーがいません。「名前」で追加してください。</div></div>`);
+  if (S.sample) out.push(`<div class="banner info"><span class="ms">lightbulb</span><div class="grow"><b>サンプルデータが入っています。</b> 名前・レイアウト・条件は自由に編集できます。</div><button class="btn text sm" id="btnClearSample">すべて空にする</button></div>`);
+  if (lastFail) out.push(`<div class="banner"><span class="ms">warning</span><div><b>必須条件をすべては満たせませんでした。</b> 最も違反の少ない配置を表示しています（赤枠が該当者）。条件を「できれば」に変えるか、ピン留めを外して再実行してください。</div></div>`);
+  if (S.result) { const un = unplaced(); if (un.length) out.push(`<div class="banner info"><span class="ms">person_search</span><div><b>未配置が${un.length}名います。</b> 「手動配置」で席をタップするか、下の未配置リストから選んで席に置けます。</div></div>`); }
+  host.innerHTML = out.join('');
+  const b = $('#btnClearSample'); if (b) b.onclick = () => confirmDlg('サンプルの名前・条件・レイアウトを消して、空の状態から始めますか？', '空にする', () => { S.members = []; S.rules = []; S.layout = makeLayout('plain', 5, 6); S.result = null; S.sample = false; save(); setPage('members'); });
+}
+function viewOrder() {
+  const L = S.layout, idx = L.cells.map((_, i) => i);
+  return S.view === 'student' ? idx.reverse() : idx;
+}
+
+
+function syncHistory() { const h = S.history.find(x => x.id === (S.result && S.result.hid)); if (h) { h.assign = { ...S.result.assign }; } }
+function renderChecks() {
+  const host = $('#checks'); if (!host) return;
+  if (!S.result) { host.innerHTML = `<div class="sub">席替え後に、各条件が満たされているかをここに表示します。</div>`; return; }
+  const ev = evaluate(modelNow(), S.result.assign);
+  if (!ev.report.length) { host.innerHTML = `<div class="sub">有効な条件がありません（ランダム配置）。「条件」で追加できます。</div>`; return; }
+  host.innerHTML = ev.report.map(r => {
+    const ok = r.viol === 0; const ic = ok ? '<span class="ms ok fill">check_circle</span>' : r.hard ? '<span class="ms ng fill">cancel</span>' : '<span class="ms soft fill">error</span>';
+    return `<div class="check">${ic}<div class="grow"><div>${ruleSentence(r.rule)}</div>${ok ? '' : `<div class="sub">違反 ${r.viol}件：${esc(r.members.slice(0, 4).map(g => g.join('・')).join(' / '))}${r.members.length > 4 ? ' ほか' : ''}</div>`}</div></div>`;
+  }).join('');
+}
+function renderSettings() {
+  const host = $('#setCard'); if (!host) return; const st = S.settings;
+  host.innerHTML = `<h3><span class="ms">tune</span>シャッフル設定</h3>
+  <div><div class="lbl">発表の演出</div><div class="seg" id="animSeg">${[['none', '即表示', 'bolt'], ['roll', 'ルーレット', 'casino'], ['seq', '1人ずつ', 'timer'], ['tap', 'タップで公開', 'touch_app']].map(([v, l, ic]) => `<button data-a="${v}" class="${st.anim === v ? 'on' : ''}"><span class="ms sm">${ic}</span>${l}</button>`).join('')}</div></div>
+  <label class="switch"><input type="checkbox" id="stSame" ${st.avoidSame ? 'checked' : ''}><span class="grow">直近と同じ席を避ける<div class="sub">過去 ${st.histN} 回分（履歴ベース）</div></span></label>
+  <label class="switch"><input type="checkbox" id="stNb" ${st.avoidNb ? 'checked' : ''}><span class="grow">前回と同じ隣同士を避ける</span></label>
+  <label class="switch"><input type="checkbox" id="stFair" ${st.fair ? 'checked' : ''}><span class="grow">前列・後列の回数を公平にする<div class="sub">過去に多く座った人ほど避けます</div></span></label>
+  <div><div class="lbl">避ける強さ（履歴の遡り回数）: <b id="histNv">${st.histN}</b></div><input type="range" id="stHistN" min="1" max="8" value="${st.histN}"></div>
+  <div><div class="lbl">名前の文字サイズ: <b id="nsv">${st.nameSize}px</b></div><input type="range" id="stNs" min="10" max="28" value="${st.nameSize}"></div>
+  <label class="switch"><input type="checkbox" id="stIgn" ${st.ignoreRules ? 'checked' : ''}><span class="grow">条件を無視して完全ランダムにする</span></label>
+  <label class="switch"><input type="checkbox" id="stSnd" ${st.sound ? 'checked' : ''}><span class="grow">効果音を鳴らす</span></label>
+  <label class="field"><span>乱数シード（空欄で毎回ランダム）</span><input id="stSeed" value="${esc(st.seed)}" placeholder="例: 2学期1回目"></label>`;
+  $('#animSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; st.anim = b.dataset.a; save(); renderSettings(); };
+  const bind = (id, k, num) => { const i = $('#' + id); i.oninput = () => { st[k] = i.type === 'checkbox' ? i.checked : num ? +i.value : i.value; save(); if (id === 'stHistN') $('#histNv').textContent = st.histN; if (id === 'stNs') { $('#nsv').textContent = st.nameSize + 'px'; drawBoard(); } }; };
+  bind('stSame', 'avoidSame'); bind('stNb', 'avoidNb'); bind('stFair', 'fair'); bind('stHistN', 'histN', 1); bind('stNs', 'nameSize', 1); bind('stSeed', 'seed'); bind('stIgn', 'ignoreRules'); bind('stSnd', 'sound');
+}
+
+/* ----- run ----- */
+function clearTimers() { timers.forEach(t => { clearTimeout(t); clearInterval(t); }); timers = []; rolling = null; }
+
+function togglePresent() {
+  const card = $('#resCard'); fsOn = !fsOn;
+  if (fsOn) { try { (card.requestFullscreen ? card.requestFullscreen() : Promise.reject()).catch(() => { }); } catch (e) { } card.style.background = 'var(--surface)'; }
+  else { try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch (e) { } card.style.background = ''; }
+  drawBoard();
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && fsOn) { fsOn = false; const c = $('#resCard'); if (c) c.style.background = ''; drawBoard(); } });
+
+/* ===== Members page ===== */
+let memberFilter = '';
+function renderMembers() {
+  const el = $('#page-members'); const tags = allTags();
+  const pres = presentList().length;
+  const list = S.members.filter(m => !memberFilter || m.name.includes(memberFilter) || m.tags.some(t => t.includes(memberFilter)));
+  el.innerHTML = `
+  <div class="h-row"><h2>名前</h2><span class="sub">出席 <b class="kbd">${pres}</b> ／ 欠席 <b class="kbd">${S.members.length - pres}</b> ／ 全 <b class="kbd">${S.members.length}</b>名</span></div>
+  <div class="grid2">
+    <div class="stack">
+      <div class="card stack">
+        <h3><span class="ms">person_add</span>メンバーを追加</h3>
+        <form id="addForm" class="row" style="flex-wrap:nowrap"><label class="field grow"><span>名前（Enterで追加）</span><input id="addName" autocomplete="off" placeholder="例: 山本"></label><button class="btn filled" type="submit"><span class="ms">add</span>追加</button></form>
+        <div class="row"><button class="btn tonal" id="btnBulk"><span class="ms">playlist_add</span>まとめて追加</button><button class="btn text" id="btnAllPresent"><span class="ms">how_to_reg</span>全員出席にする</button><button class="btn text danger" id="btnClearAll"><span class="ms">delete_sweep</span>全員削除</button></div>
+      </div>
+      <div class="card stack" id="offCard"></div>
+      <div class="card stack"><h3><span class="ms">sell</span>タグ（グループ分け）</h3>
+        <div class="sub">「男子」「視力」「班長」など、条件の対象をまとめて指定するためのラベルです。各メンバーの編集で付けられます。</div>
+        <div class="chips">${tags.length ? tags.map(t => `<span class="chip tag" style="height:28px;font-size:12px">${esc(t)} ${S.members.filter(m => m.tags.includes(t)).length}名</span>`).join('') : '<span class="sub">タグはまだありません</span>'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <label class="field" style="margin:8px 0 12px"><span>絞り込み</span><input id="memFilter" value="${esc(memberFilter)}" placeholder="名前・タグで検索"></label>
+      <div class="list" id="memList">${list.length ? list.map(m => `<div class="li ${m.absent ? 'absent' : ''}"><div class="avatar">${esc(m.name.slice(0, 1))}</div><div class="txt"><div class="nm">${esc(m.name)}${m.tags.includes('学級委員') ? ' <span class="ms sm fill" style="color:#e0a100;vertical-align:-3px">star</span>' : ''}</div><div class="meta">${m.tags.map(t => `<span class="chip tag">${esc(t)}</span>`).join('')}${m.absent ? '<span class="sub">欠席</span>' : ''}</div></div>
+        <button class="icon-btn" data-abs="${m.id}" title="${m.absent ? '出席にする' : '欠席にする'}"><span class="ms">${m.absent ? 'person_off' : 'how_to_reg'}</span></button>
+        <button class="icon-btn" data-edit="${m.id}" title="編集"><span class="ms">edit</span></button>
+        <button class="icon-btn" data-del="${m.id}" title="削除"><span class="ms">delete</span></button></div>`).join('') : `<div class="empty-state"><span class="ms">group_off</span><div>メンバーがいません</div></div>`}</div>
+    </div>
+  </div>`;
+  $('#addForm').onsubmit = e => { e.preventDefault(); const v = $('#addName').value.trim(); if (!v) return; S.members.push({ id: uid(), name: v, tags: [], absent: false }); S.sample = S.sample; save(); renderMembers(); $('#addName').focus(); };
+  $('#memFilter').oninput = e => { memberFilter = e.target.value; const pos = e.target.selectionStart; renderMembers(); const f = $('#memFilter'); f.focus(); f.setSelectionRange(pos, pos); };
+  $('#btnAllPresent').onclick = () => { S.members.forEach(m => m.absent = false); save(); renderMembers(); };
+  $('#btnClearAll').onclick = () => confirmDlg('全メンバーを削除します。条件に含まれる指定も外れます。よろしいですか？', '削除する', () => { S.members = []; S.rules.forEach(r => { ['A', 'B'].forEach(k => r[k] && (r[k].p = [])); }); S.result = null; save(); renderMembers(); });
+  $('#btnBulk').onclick = bulkDialog; renderOfficerCard();
+  $$('[data-abs]').forEach(b => b.onclick = () => { const m = memberById(b.dataset.abs); m.absent = !m.absent; save(); renderMembers(); });
+  $$('[data-edit]').forEach(b => b.onclick = () => editMember(b.dataset.edit));
+  $$('[data-del]').forEach(b => b.onclick = () => { const id = b.dataset.del; S.members = S.members.filter(m => m.id !== id); S.rules.forEach(r => ['A', 'B'].forEach(k => r[k] && (r[k].p = r[k].p.filter(x => x !== id)))); save(); renderMembers(); });
+}
+function bulkDialog() {
+  dialog({
+    title: 'まとめて追加', icon: 'playlist_add', body: `<div class="sub">1行に1人。「名前, タグ, タグ」の形式でタグも同時に付けられます。Excelや名簿からの貼り付けにも対応（タブ区切り可）。</div><div class="row"><label class="btn outlined sm" style="cursor:pointer"><span class="ms">upload_file</span>CSV/テキストを読み込む<input type="file" id="bulkFile" accept=".csv,.txt,text/plain,text/csv" hidden></label></div><label class="field"><span>名簿</span><textarea id="bulkTa" rows="9" placeholder="山本, 男子, 視力&#10;中島, 女子&#10;小川"></textarea></label>`,
+    actions: [{ label: 'キャンセル' }, {
+      label: '追加する', kind: 'filled', icon: 'add', onClick: el => {
+        const lines = $('#bulkTa', el).value.split(/\n/).map(l => l.trim()).filter(Boolean); if (!lines.length) return false;
+        lines.forEach(l => { const [n, ...t] = l.split(/[,，、\t]+/).map(x => x.trim()).filter(Boolean); if (n) S.members.push({ id: uid(), name: n, tags: [...new Set(t)], absent: false }); });
+        save(); renderMembers(); snack(`${lines.length}名を追加しました`);
+      }
+    }]
+  });
+}
+function editMember(id) {
+  const m = memberById(id);
+  dialog({
+    title: 'メンバーを編集', icon: 'edit', body: `<label class="field"><span>名前</span><input id="emName" value="${esc(m.name)}"></label>
+    <label class="field"><span>タグ（カンマ区切り）</span><input id="emTags" value="${esc(m.tags.join(', '))}" placeholder="男子, 視力, 班長"></label>
+    <div><div class="lbl">既存のタグから追加</div><div class="chips">${tagUniverse().map(t => `<button type="button" class="chip ${m.tags.includes(t) ? 'sel' : ''}" data-t="${esc(t)}">${esc(t)}</button>`).join('') || '<span class="sub">なし</span>'}</div></div>
+    <label class="switch"><input type="checkbox" id="emAbs" ${m.absent ? 'checked' : ''}><span>欠席（席替えの対象から外す）</span></label>`,
+    actions: [{ label: 'キャンセル' }, { label: '保存', kind: 'filled', onClick: el => { const n = $('#emName', el).value.trim(); if (!n) return false; m.name = n; m.tags = [...new Set($('#emTags', el).value.split(/[,，、]+/).map(x => x.trim()).filter(Boolean))]; m.absent = $('#emAbs', el).checked; save(); renderMembers(); } }]
+  });
+  $$('.chip[data-t]', $('#overlay')).forEach(c => c.onclick = () => { const inp = $('#emTags'); let ts = inp.value.split(/[,，、]+/).map(x => x.trim()).filter(Boolean); const t = c.dataset.t; ts = ts.includes(t) ? ts.filter(x => x !== t) : [...ts, t]; inp.value = ts.join(', '); c.classList.toggle('sel'); });
+}
+/* ===== Layout page ===== */
+let tool = 'seat', paintG = 1, painting = false;
+function layoutChanged(oldL) {
+  const L = S.layout;
+  const remap = ci => { const r = Math.floor(ci / oldL.cols), c = ci % oldL.cols; if (r >= L.rows || c >= L.cols) return null; const n = r * L.cols + c; return L.cells[n] && L.cells[n].s ? n : null; };
+  S.rules.forEach(r => { if (r.seats) { r.seats = r.seats.map(remap).filter(v => v != null); delete r.preset; } if (r.type === 'fix') { const n = remap(r.seat); if (n == null) { r.on = false; } r.seat = n == null ? r.seat : n; } });
+  S.result = null; lastFail = null; hiddenSet.clear(); sel = null; save();
+}
+function setCell(i) {
+  const c = S.layout.cells[i]; if (!c) return;
+  if (tool === 'seat') c.s = 1; else if (tool === 'void') { c.s = 0; c.g = 0; } else if (tool === 'g') { if (c.s) c.g = paintG; } else if (tool === 'g0') c.g = 0;
+}
+function renderLayout() {
+  const el = $('#page-layout'); const L = S.layout;
+  el.innerHTML = `
+  <div class="h-row"><h2>座席レイアウト</h2><span class="sub">座席 <b class="kbd">${seatCount()}</b>席 ／ 出席 <b class="kbd">${presentList().length}</b>名</span></div>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))">
+    <div class="stack">
+      <div class="card stack"><h3><span class="ms">straighten</span>サイズ</h3>
+        <div class="row"><label class="field grow"><span>行数（奥行き）</span><input type="number" id="lyRows" min="1" max="12" value="${L.rows}"></label><label class="field grow"><span>列数（横）</span><input type="number" id="lyCols" min="1" max="16" value="${L.cols}"></label></div>
+        <label class="switch"><input type="checkbox" id="lyTeacher" ${L.teacher ? 'checked' : ''}><span>教卓・黒板を表示</span></label>
+      </div>
+      <div class="card stack"><h3><span class="ms">auto_awesome_mosaic</span>テンプレート</h3>
+        <div class="chips">${[['plain', '標準', 'grid_on'], ['aisle', '通路付き', 'view_column'], ['pairs', '2列×通路・班', 'groups'], ['island', '島（4人班）', 'dashboard'], ['zigzag', '千鳥', 'texture'], ['u', 'U字', 'u_turn_left']].map(([k, l, ic]) => `<button class="chip" data-tpl="${k}"><span class="ms sm">${ic}</span>${l}</button>`).join('')}</div>
+        <div class="sub">現在のサイズで作り直します（班の設定も置き換わります）。</div>
+      </div>
+      <div class="card stack"><h3><span class="ms">flip</span>操作</h3>
+        <div class="row"><button class="btn tonal sm" id="lyFlipH"><span class="ms">swap_horiz</span>左右反転</button><button class="btn tonal sm" id="lyFlipV"><span class="ms">swap_vert</span>上下反転</button><button class="btn text sm" id="lyAllSeat">全て席にする</button><button class="btn text sm" id="lyClearG">班を解除</button></div>
+      </div>
+    </div>
+    <div class="card stack" style="grid-column:span 1">
+      <h3><span class="ms">brush</span>ペイント</h3>
+      <div class="seg" id="toolSeg">
+        <button data-tool="seat" class="${tool === 'seat' ? 'on' : ''}"><span class="ms sm">chair</span>席</button>
+        <button data-tool="void" class="${tool === 'void' ? 'on' : ''}"><span class="ms sm">backspace</span>通路・空き</button>
+        <button data-tool="g" class="${tool === 'g' ? 'on' : ''}"><span class="ms sm">format_color_fill</span>班を塗る</button>
+        <button data-tool="g0" class="${tool === 'g0' ? 'on' : ''}"><span class="ms sm">format_color_reset</span>班を消す</button>
+      </div>
+      <div class="chips" id="gPick" style="${tool === 'g' ? '' : 'display:none'}">${[1, 2, 3, 4, 5, 6, 7, 8].map(g => `<button class="chip ${paintG === g ? 'sel' : ''}" data-g="${g}" style="background:${paintG === g ? '' : `var(--g${g})`}">${g}班</button>`).join('')}</div>
+      <div class="sub">ドラッグでまとめて塗れます。班は「同じ班／別の班」「班ごとに分散」の条件で使います。</div>
+      <div id="lyBoardHost"></div>
+    </div>
+  </div>`;
+  const num = (id, mn, mx) => { const i = $(id); i.onchange = () => { i.value = clamp(+i.value || mn, mn, mx); const old = S.layout; const rows = +$('#lyRows').value, cols = +$('#lyCols').value; S.layout = resizeLayout(old, rows, cols); layoutChanged(old); renderLayout(); }; };
+  num('#lyRows', 1, 12); num('#lyCols', 1, 16);
+  $('#lyTeacher').onchange = e => { L.teacher = e.target.checked; save(); };
+  $$('[data-tpl]').forEach(b => b.onclick = () => { const old = S.layout; S.layout = makeLayout(b.dataset.tpl, L.rows, L.cols); S.layout.teacher = old.teacher; layoutChanged(old); renderLayout(); });
+  $('#lyFlipH').onclick = () => { const old = JSON.parse(JSON.stringify(L)); for (let r = 0; r < L.rows; r++) { const row = L.cells.slice(r * L.cols, (r + 1) * L.cols).reverse(); row.forEach((c, k) => L.cells[r * L.cols + k] = c); } layoutChanged(old); renderLayout(); };
+  $('#lyFlipV').onclick = () => { const old = JSON.parse(JSON.stringify(L)); const rows = []; for (let r = 0; r < L.rows; r++) rows.push(L.cells.slice(r * L.cols, (r + 1) * L.cols)); S.layout.cells = rows.reverse().flat(); layoutChanged(old); renderLayout(); };
+  $('#lyAllSeat').onclick = () => { const old = JSON.parse(JSON.stringify(L)); L.cells.forEach(c => c.s = 1); layoutChanged(old); renderLayout(); };
+  $('#lyClearG').onclick = () => { L.cells.forEach(c => c.g = 0); save(); renderLayout(); };
+  $('#toolSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return; tool = b.dataset.tool; renderLayout(); };
+  $('#gPick').onclick = e => { const b = e.target.closest('button'); if (!b) return; paintG = +b.dataset.g; renderLayout(); };
+  drawLayoutBoard();
+}
+function drawLayoutBoard() {
+  const host = $('#lyBoardHost'); const L = S.layout, nums = seatNumbers();
+  host.innerHTML = `${L.teacher ? '<div class="teacher"><span class="ms">podium</span>教卓・黒板</div>' : ''}<div class="board-wrap"><div class="board" id="lyBoard" style="grid-template-columns:repeat(${L.cols},var(--cw));--cols:${L.cols}">${L.cells.map((c, i) => c.s ? `<div class="cell seat" data-i="${i}" data-g="${c.g}"><span class="no">${nums[i]}</span>${c.g ? `<span>${c.g}班</span>` : ''}</div>` : `<div class="cell void" data-i="${i}"></div>`).join('')}</div></div>`;
+  const b = $('#lyBoard');
+  const hit = e => { const t = document.elementFromPoint(e.clientX, e.clientY); const c = t && t.closest && t.closest('.cell[data-i]'); return c ? +c.dataset.i : null; };
+  b.onpointerdown = e => { const i = hit(e); if (i == null) return; painting = true; b.setPointerCapture && b.setPointerCapture(e.pointerId); const old = JSON.parse(JSON.stringify(S.layout)); b._old = old; setCell(i); drawLayoutBoardKeep(); };
+  b.onpointermove = e => { if (!painting) return; const i = hit(e); if (i == null) return; const c = S.layout.cells[i]; const before = c.s + ':' + c.g; setCell(i); if (before !== c.s + ':' + c.g) drawLayoutBoardKeep(); };
+  const end = () => { if (!painting) return; painting = false; layoutChanged(b._old || S.layout); $('.sub.kbd') ; const hs = $('.h-row .sub'); if (hs) hs.innerHTML = `座席 <b class="kbd">${seatCount()}</b>席 ／ 出席 <b class="kbd">${presentList().length}</b>名`; };
+  b.onpointerup = end; b.onpointercancel = end;
+}
+function drawLayoutBoardKeep() { // redraw cells only, keep painting state
+  const L = S.layout, nums = seatNumbers(), b = $('#lyBoard'); if (!b) return;
+  [...b.children].forEach((el, i) => { const c = L.cells[i]; el.className = 'cell ' + (c.s ? 'seat' : 'void'); el.dataset.g = c.g; el.innerHTML = c.s ? `<span class="no">${nums[i]}</span>${c.g ? `<span>${c.g}班</span>` : ''}` : ''; });
+}
+
+/* ===== Rules ===== */
+const RTYPE = {
+  near: { label: '近くに必ず置く', icon: 'near_me', desc: '〇〇は□□の前後左右などに必ず置く', B: true },
+  apart: { label: '近づけない', icon: 'do_not_touch', desc: '〇〇と□□は隣り合わせにしない', B: true, optB: true },
+  dist: { label: '距離で指定', icon: 'straighten', desc: '〇〇と□□はN席以上離す／N席以内', B: true, optB: true },
+  area: { label: '席の範囲で指定', icon: 'select_all', desc: '〇〇は前列／窓側など指定範囲に座る・座らない' },
+  fix: { label: '席を固定', icon: 'push_pin', desc: '〇〇は特定の席に必ず座る' },
+  line: { label: '同じ・別の行／列', icon: 'table_rows', desc: '同じ列にする／別の行にする', B: true, optB: true },
+  group: { label: '同じ・別の班', icon: 'groups', desc: '同じ班にする／別の班にする', B: true, optB: true },
+  spread: { label: '均等に分散', icon: 'balance', desc: 'タグの人を班・行・列ごとにばらけさせる' },
+};
+const PRESET_LABEL = { front1: '最前列', front2: '前2列', front3: '前3列', back1: '最後列', back2: '後ろ2列', back3: '後ろ3列', left1: '左端の列', left2: '左2列', right1: '右端の列', right2: '右2列', centerCol: '中央の列', edgeCol: '両端の列', frontHalf: '前半分', backHalf: '後ろ半分', all: '全席' };
+function ruleSentence(r, plain) {
+  const B = x => plain ? x : `<b>${esc(x)}</b>`;
+  const a = B(describeSel(r.A, S.members)), b = (r.B && (r.B.p.length || r.B.t.length)) ? B(describeSel(r.B, S.members)) : null;
+  const pair = b ? `${a} と ${b}` : `${a} 同士`;
+  let s = '';
+  const n = (r.n || 1);
+  switch (r.type) {
+    case 'near': {
+      const m = { four: 'の前後左右のどこか', lr: 'の左右どちらか', fb: 'の前か後ろ', eight: 'の周囲8マス（斜め含む）', diag: 'の斜め', front: 'の真前', back: 'の真後ろ', left: 'の左隣', right: 'の右隣' }[r.rel];
+      s = `${a} は ${b || B('（未選択）')} ${m} に置く`; break;
+    }
+    case 'apart': { const m = { four: '前後左右', lr: '左右', fb: '前後', eight: '周囲8マス', diag: '斜め' }[r.rel] || REL[r.rel].label; s = `${pair} は ${m} で隣り合わせにしない`; break; }
+    case 'dist': s = `${pair} は ${r.op === 'min' ? `${n}マス以上 離す` : `${n}マス以内 に置く`}（${r.metric === 'man' ? '縦横の歩数' : '斜めも1マス'}）`; break;
+    case 'area': { const nm = r.preset ? PRESET_LABEL[r.preset] : `指定した${(r.seats || []).length}席`; s = `${a} は ${B(nm)} に${r.mode === 'in' ? '座る' : '座らない'}`; break; }
+    case 'fix': { const no = seatNumbers()[r.seat]; s = `${a} は ${B('席No.' + (no || '?'))} に固定`; break; }
+    case 'line': s = `${pair} は ${{ sameRow: '同じ行（横一列）', sameCol: '同じ列（縦一列）', diffRow: '別の行', diffCol: '別の列' }[r.kind]} にする`; break;
+    case 'group': s = `${pair} は ${r.kind === 'same' ? '同じ班' : '別の班'} にする`; break;
+    case 'spread': s = `${a} を ${{ group: '各班', row: '各行', col: '各列' }[r.by]} にできるだけ均等に分散`; break;
+  }
+  return s;
+}
+function renderRules() {
+  const el = $('#page-rules');
+  el.innerHTML = `
+  <div class="h-row"><h2>条件</h2><span class="sub">必須の条件は必ず守り、「できれば」の条件はなるべく多く満たすよう最適化します。</span></div>
+  <div class="row" style="margin-bottom:16px">
+    <button class="btn filled" id="btnAddRule"><span class="ms">add</span>条件を追加</button>
+    <button class="btn tonal" id="btnAI" ${caps.sample ? '' : 'hidden'}><span class="ms">auto_awesome</span>文章でAIに追加</button>
+  </div>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+    <div class="stack" id="ruleList"></div>
+    <div class="stack">
+      <div class="card stack"><h3><span class="ms">bolt</span>ワンタップ追加</h3>
+        <div class="sub">よく使う条件を雛形から作ります。対象は次の画面で選べます。</div>
+        <div class="chips">
+          <button class="chip" data-tpl="nearSep"><span class="ms sm">do_not_touch</span>同じタグ同士を隣にしない</button>
+          <button class="chip" data-tpl="front"><span class="ms sm">visibility</span>視力・前列に配置</button>
+          <button class="chip" data-tpl="spread"><span class="ms sm">balance</span>各班に分散</button>
+          <button class="chip" data-tpl="pair"><span class="ms sm">link</span>この2人は隣に</button>
+          <button class="chip" data-tpl="sep"><span class="ms sm">link_off</span>この2人は離す</button>
+          <button class="chip" data-tpl="fix"><span class="ms sm">push_pin</span>席を固定</button>
+          <button class="chip" data-tpl="offBehind"><span class="ms sm">star</span>学級委員をこの人の後ろに</button>
+          <button class="chip" data-tpl="offSpread"><span class="ms sm">star</span>学級委員を各班に分散</button>
+          <button class="chip" data-tpl="offFront"><span class="ms sm">star</span>学級委員は前列</button>
+        </div></div>
+      <div class="card stack"><h3><span class="ms">help</span>条件の考え方</h3>
+        <div class="sub" style="line-height:1.8">
+        ・<b>必須</b>：1つでも破れる配置は採用しません（満たせない時は赤枠で警告）。<br>
+        ・<b>できれば</b>：強さ(1〜10)が大きいほど優先されます。<br>
+        ・対象は<b>名前</b>でも<b>タグ</b>でも指定でき、複数選べます。<br>
+        ・方向は画面で見たまま（上＝教卓側、左＝画面の左）です。<br>
+        ・斜めを含めたい時は「周囲8マス」を選びます。</div></div>
+    </div>
+  </div>`;
+  const host = $('#ruleList');
+  host.innerHTML = S.rules.length ? S.rules.map(r => {
+    const t = RTYPE[r.type];
+    return `<div class="rule ${r.on ? '' : 'off'}"><div class="ico ${r.hard || r.type === 'fix' ? '' : 'soft'}"><span class="ms">${t.icon}</span></div>
+    <div class="txt"><div>${r.hard || r.type === 'fix' ? '<span class="badge">必須</span>' : `<span class="badge soft">できれば ★${r.w}</span>`}<span class="sub">${t.label}</span></div><div>${ruleSentence(r)}</div></div>
+    <label class="switch" title="有効/無効"><input type="checkbox" data-on="${r.id}" ${r.on ? 'checked' : ''}></label>
+    <div class="row" style="gap:0;flex-wrap:nowrap"><button class="icon-btn" data-redit="${r.id}" title="編集"><span class="ms">edit</span></button><button class="icon-btn" data-rdup="${r.id}" title="複製"><span class="ms">content_copy</span></button><button class="icon-btn" data-rdel="${r.id}" title="削除"><span class="ms">delete</span></button></div></div>`;
+  }).join('') : `<div class="card empty-state"><span class="ms">rule</span><div style="margin-top:8px">条件はまだありません。<br>「条件を追加」から作成できます。</div></div>`;
+  $('#btnAddRule').onclick = () => ruleDialog(null);
+  $('#btnAI').onclick = aiDialog;
+  $$('[data-on]').forEach(i => i.onchange = () => { S.rules.find(r => r.id === i.dataset.on).on = i.checked; save(); renderRules(); });
+  $$('[data-redit]').forEach(b => b.onclick = () => ruleDialog(S.rules.find(r => r.id === b.dataset.redit)));
+  $$('[data-rdup]').forEach(b => b.onclick = () => { const r = S.rules.find(x => x.id === b.dataset.rdup); S.rules.push({ ...JSON.parse(JSON.stringify(r)), id: uid() }); save(); renderRules(); });
+  $$('[data-rdel]').forEach(b => b.onclick = () => { S.rules = S.rules.filter(r => r.id !== b.dataset.rdel); save(); renderRules(); });
+  $$('[data-tpl]', el).forEach(b => b.onclick = () => {
+    const base = { A: { p: [], t: [] }, B: { p: [], t: [] }, hard: true, w: 5, on: true };
+    const T = {
+      nearSep: { ...base, type: 'apart', hard: false, w: 6, rel: 'lr' }, front: { ...base, type: 'area', mode: 'in', seats: seatsByPreset(S.layout, 'front2'), preset: 'front2' },
+      spread: { ...base, type: 'spread', hard: false, w: 5, by: 'group' }, pair: { ...base, type: 'near', rel: 'four' }, sep: { ...base, type: 'dist', op: 'min', n: 3, metric: 'man' }, fix: { ...base, type: 'fix', seat: S.layout.cells.findIndex(c => c.s) },
+      offBehind: { ...base, type: 'near', rel: 'back', hard: false, w: 7, A: { p: [], t: ['学級委員'] } }, offSpread: { ...base, type: 'spread', hard: false, w: 6, by: 'group', A: { p: [], t: ['学級委員'] } }, offFront: { ...base, type: 'area', mode: 'in', hard: false, w: 5, seats: seatsByPreset(S.layout, 'front2'), preset: 'front2', A: { p: [], t: ['学級委員'] } },
+    }[b.dataset.tpl];
+    ruleDialog(T, true);
+  });
+}
+/* ===== Extras: undo, manual edit, candidates, officers, image/print, slots ===== */
+const tagUniverse = () => [...new Set([...ROLES, ...allTags()])];
+let undoStack = [], redoStack = [], trayPick = null, dragFrom = null;
+const snapRes = () => S.result ? JSON.stringify({ assign: S.result.assign, locked: S.result.locked || [], hid: S.result.hid }) : null;
+function updUndo() { const u = $('#btnUndo'), r = $('#btnRedo'); if (u) u.disabled = !undoStack.length; if (r) r.disabled = !redoStack.length; }
+function pushUndo() { undoStack.push(snapRes()); if (undoStack.length > 60) undoStack.shift(); redoStack = []; updUndo(); }
+function applySnap(s) { clearTimers(); hiddenSet.clear(); S.result = s == null ? null : JSON.parse(s); syncHistory(); save(); if (S.page === 'shuffle') { drawBoard(); renderChecks(); renderBanners(); updUndo(); } }
+function undo() { if (!undoStack.length) return; redoStack.push(snapRes()); applySnap(undoStack.pop()); }
+function redo() { if (!redoStack.length) return; undoStack.push(snapRes()); applySnap(redoStack.pop()); }
+function unplaced() { if (!S.result) return []; const placed = new Set(Object.values(S.result.assign).filter(Boolean)); return presentList().filter(m => !placed.has(m.id)); }
+function ensureResult() { if (!S.result) { const a = {}; S.layout.cells.forEach((c, i) => { if (c.s) a[i] = null; }); S.result = { assign: a, hid: null, locked: [] }; } }
+let ac = null;
+function beep(f = 660, d = .06, t = 'sine', v = .05) { if (!S.settings.sound) return; try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.type = t; o.frequency.value = f; g.gain.value = v; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) { } }
+
+/* ----- board ----- */
+function drawBoard() {
+  const host = $('#boardHost'); if (!host) return;
+  const L = S.layout, nums = seatNumbers(), res = S.result;
+  if (!res) {
+    host.innerHTML = `<div class="empty-state"><span class="ms">event_seat</span><div style="margin:8px 0 16px">まだ席替えをしていません。</div><div class="row" style="justify-content:center"><button class="btn filled" id="btnGo"><span class="ms">shuffle</span>席替えを実行</button><button class="btn outlined" id="btnManual"><span class="ms">edit</span>手動で配置する</button></div></div>`;
+    $('#legend').innerHTML = ''; $('#btnGo').onclick = runShuffle; $('#btnManual').onclick = () => { ensureResult(); mode = 'edit'; save(); renderShuffle(); }; return;
+  }
+  const bad = evaluate(modelNow(), res.assign).bad; const rollNames = presentList().map(m => m.name);
+  const cells = viewOrder().map(i => {
+    const c = L.cells[i]; if (!c.s) return `<div class="cell void" style="border:0;opacity:0"></div>`;
+    const id = res.assign[i]; const m = id ? memberById(id) : null; const rl = rolling && rolling.has(i), hd = hiddenSet.has(i);
+    const locked = (res.locked || []).includes(i);
+    const cls = ['cell', 'seat']; if (!m) cls.push('empty'); if (locked) cls.push('lock'); if (sel === i) cls.push('pick'); if (m && bad.has(id) && !hd && !rl) cls.push('bad'); if (hd) cls.push('hidden'); if (rl) cls.push('roll');
+    let name = m ? m.name : '空席'; if (rl) name = rollNames[Math.floor(Math.random() * rollNames.length)] || '';
+    const show = m && !hd && !rl;
+    const star = show ? (m.tags.includes('学級委員') ? '<span class="ms star fill">star</span>' : m.tags.includes('副学級委員') ? '<span class="ms star">star</span>' : '') : '';
+    const tg = show ? m.tags.filter(t => t !== '学級委員' && t !== '副学級委員').slice(0, 2).join(' / ') : '';
+    const dr = mode === 'swap' && m && !hd && !rl && !locked ? ' draggable="true"' : '';
+    return `<div class="${cls.join(' ')}" data-i="${i}" data-g="${c.g}"${dr} style="--nfs:${S.settings.nameSize}px"><span class="no">${nums[i]}</span><span><span class="n">${esc(hd ? '？？？' : name)}</span><span class="tg">${esc(tg)}</span></span>${star}</div>`;
+  }).join('');
+  const teacher = `<div class="teacher"><span class="ms">podium</span>教卓・黒板</div>`;
+  const un = unplaced();
+  host.innerHTML = `${S.view === 'teacher' && L.teacher ? teacher : ''}<div class="board-wrap"><div class="board res${fsOn ? ' fs' : ''}" style="grid-template-columns:repeat(${L.cols},var(--cw));--cols:${L.cols}">${cells}</div></div>${S.view === 'student' && L.teacher ? `<div style="margin-top:12px">${teacher}</div>` : ''}${un.length ? `<div class="tray"><span class="sub" style="align-self:center">未配置 ${un.length}名（選んでから席をタップ）</span>${un.map(m => `<button class="chip ${trayPick === m.id ? 'sel' : ''}" data-tray="${m.id}">${esc(m.name)}</button>`).join('')}</div>` : ''}`;
+  $$('.cell[data-i]', host).forEach(c => {
+    const i = +c.dataset.i; c.onclick = () => onCellClick(i);
+    c.ondragstart = e => { dragFrom = i; try { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; } catch (x) { } };
+    c.ondragover = e => { if (dragFrom != null) { e.preventDefault(); c.classList.add('dragover'); } };
+    c.ondragleave = () => c.classList.remove('dragover');
+    c.ondrop = e => { e.preventDefault(); const a = dragFrom; dragFrom = null; if (a != null && a !== i) swapCells(a, i); else drawBoard(); };
+    c.ondragend = () => { dragFrom = null; $$('.dragover').forEach(x => x.classList.remove('dragover')); };
+  });
+  $$('[data-tray]', host).forEach(b => b.onclick = () => { trayPick = trayPick === b.dataset.tray ? null : b.dataset.tray; drawBoard(); });
+  const gs = [...new Set(L.cells.filter(c => c.s && c.g).map(c => c.g))].sort();
+  $('#legend').innerHTML = gs.map(g => `<span><span class="cell seat" data-g="${g}" style="display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px"></span> ${g}班</span>`).join('') + `<span><span class="ms sm star" style="position:static;vertical-align:-4px">star</span> 学級委員</span><span><span class="ms sm" style="vertical-align:-4px;color:var(--primary)">lock</span> ピン留め</span><span style="color:var(--error)">■ 赤枠＝条件に違反</span><span class="grow"></span><button class="btn text sm" id="btnClearSeats"><span class="ms">backspace</span>全員を席から外す</button>`;
+  $('#btnClearSeats').onclick = () => { pushUndo(); Object.keys(res.assign).forEach(k => { if (!(res.locked || []).includes(+k)) res.assign[k] = null; }); afterEdit(); };
+}
+function afterEdit() { syncHistory(); save(); drawBoard(); renderChecks(); renderBanners(); updUndo(); }
+function swapCells(a, b) {
+  const res = S.result; res.locked = res.locked || [];
+  if (res.locked.includes(a) || res.locked.includes(b)) { snack('ピン留めされた席は入れ替えできません'); sel = null; drawBoard(); return; }
+  pushUndo(); const x = res.assign; [x[a], x[b]] = [x[b], x[a]]; sel = null; afterEdit();
+}
+function onCellClick(i) {
+  const res = S.result; if (!res) return;
+  if (hiddenSet.has(i)) { hiddenSet.delete(i); drawBoard(); const c2 = $(`.cell[data-i="${i}"]`); if (c2) c2.classList.add('flip'); beep(740, .08); return; }
+  if (rolling) return;
+  res.locked = res.locked || [];
+  if (trayPick) { if (res.locked.includes(i)) { snack('ピン留めされた席には置けません'); return; } pushUndo(); res.assign[i] = trayPick; trayPick = null; afterEdit(); return; }
+  if (mode === 'lock') { if (!res.assign[i] && !res.locked.includes(i)) { snack('空席はピン留めできません'); return; } pushUndo(); const k = res.locked.indexOf(i); if (k >= 0) res.locked.splice(k, 1); else res.locked.push(i); afterEdit(); return; }
+  if (mode === 'edit') { seatDialog(i); return; }
+  if (sel == null) { sel = i; drawBoard(); return; }
+  if (sel === i) { sel = null; drawBoard(); return; }
+  swapCells(sel, i);
+}
+function seatDialog(i) {
+  const res = S.result, nums = seatNumbers(), cur = res.assign[i] ? memberById(res.assign[i]) : null;
+  const seatOf = {}; Object.entries(res.assign).forEach(([ci, id]) => id && (seatOf[id] = +ci));
+  const list = presentList().slice().sort((a, b) => (seatOf[a.id] != null) - (seatOf[b.id] != null));
+  const d = dialog({
+    title: `席No.${nums[i]} に座る人`, icon: 'event_seat',
+    body: `<div class="sub">現在：<b>${cur ? esc(cur.name) : '空席'}</b>。選んだ人をこの席に置きます（他の席にいる人とは入れ替わります）。</div><div class="chips scroll" style="max-height:320px">${list.map(m => `<button class="chip ${cur && cur.id === m.id ? 'sel' : ''}" data-pm="${m.id}">${esc(m.name)}<span class="sub" style="font-size:11px">${seatOf[m.id] != null ? 'No.' + nums[seatOf[m.id]] : '未配置'}</span></button>`).join('')}</div>`,
+    actions: [{ label: '空席にする', onClick: () => { if ((res.locked || []).includes(i)) { snack('ピン留め中です'); return false; } pushUndo(); res.assign[i] = null; afterEdit(); } }, { label: '閉じる' }]
+  });
+  $$('[data-pm]', d.el).forEach(b => b.onclick = () => {
+    const id = b.dataset.pm, j = seatOf[id]; res.locked = res.locked || [];
+    if (res.locked.includes(i) || (j != null && res.locked.includes(j))) { snack('ピン留めされた席が含まれています'); return; }
+    pushUndo(); if (j != null && j !== i) res.assign[j] = res.assign[i] || null; res.assign[i] = id; afterEdit(); d.close();
+  });
+}
+
+/* ----- shuffle ----- */
+function solveNow(timeMs) {
+  const locks = {}; if (S.result) (S.result.locked || []).forEach(i => { if (S.result.assign[i]) locks[i] = S.result.assign[i]; });
+  const m = modelNow({ lockedSeats: locks }); if (S.settings.ignoreRules) m.rules = [];
+  return solve(m, { timeMs });
+}
+function runShuffle() {
+  if (S.page !== 'shuffle') setPage('shuffle');
+  clearTimers(); sel = null; hiddenSet.clear();
+  const r = solveNow(900);
+  if (!r.assign) { renderBanners(); dialog({ title: '席替えできません', icon: 'error', body: r.errors.map(e => `<div>${esc(e)}</div>`).join(''), actions: [{ label: '閉じる', kind: 'filled' }] }); return; }
+  if (r.errors.length) snack(r.errors[0], 4500);
+  pushUndo(); adoptResult(r);
+}
+function adoptResult(r, { anim = true } = {}) {
+  clearTimers(); sel = null; hiddenSet.clear(); trayPick = null;
+  lastFail = r.hardViol > 0 ? r.report.filter(x => x.hard && x.viol) : null;
+  const hid = uid(), names = {}; S.members.forEach(m => names[m.id] = m.name);
+  S.history.unshift({ id: hid, ts: Date.now(), assign: { ...r.assign }, rows: S.layout.rows, cols: S.layout.cols, shape: S.layout.cells.map(c => c.s ? 1 : 0).join(''), names, seed: S.settings.seed });
+  S.history = S.history.slice(0, 40);
+  S.result = { assign: { ...r.assign }, hid, locked: (S.result && S.result.locked || []).filter(i => r.assign[i]) };
+  save(); renderBanners(); renderChecks(); updUndo();
+  const a = !anim || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : S.settings.anim;
+  const seatIdx = S.layout.cells.map((c, i) => c.s && !S.result.locked.includes(i) && r.assign[i] ? i : -1).filter(i => i >= 0);
+  if (a === 'none') { drawBoard(); return; }
+  if (a === 'roll') {
+    rolling = new Set(seatIdx); drawBoard();
+    timers.push(setInterval(() => { drawBoard(); beep(280 + Math.random() * 500, .025, 'square', .02); }, 90));
+    const order = seatIdx.slice().sort(() => Math.random() - .5);
+    timers.push(setTimeout(() => order.forEach((i, k) => timers.push(setTimeout(() => { rolling.delete(i); drawBoard(); if (k === order.length - 1) { clearTimers(); drawBoard(); [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, .16, 'triangle', .06), n * 130)); } }, k * Math.min(120, 2200 / order.length)))), 1000));
+  } else {
+    seatIdx.forEach(i => hiddenSet.add(i)); drawBoard();
+    if (a === 'seq') { const ord = seatIdx.slice().sort((x, y) => S.settings.fillOrder === 'front' ? x - y : y - x); ord.forEach((i, k) => timers.push(setTimeout(() => { hiddenSet.delete(i); drawBoard(); beep(700, .07); const c = $(`.cell[data-i="${i}"]`); if (c) c.classList.add('flip'); }, 400 + k * 450))); }
+  }
+}
+function candidatesDialog() {
+  const n = presentList().length; if (!n || n > seatCount()) { snack('出席者数と座席数を確認してください'); return; }
+  const outs = []; for (let k = 0; k < 6; k++) { const r = solveNow(250); if (r.assign) { r.soft = r.report.filter(x => !x.hard).reduce((s, x) => s + x.viol, 0); outs.push(r); } }
+  outs.sort((a, b) => a.hardViol - b.hardViol || a.cost - b.cost);
+  const L = S.layout, cw = Math.max(14, Math.min(40, Math.floor(280 / L.cols))), cf = cw >= 34 ? 10 : cw >= 26 ? 8 : 0;
+  const d = dialog({
+    title: '候補を比較して選ぶ', icon: 'view_carousel', wide: true,
+    body: `<div class="sub">条件を満たす配置を${outs.length}案つくりました（良い順）。気に入った案を採用してください。</div><div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">${outs.map((r, k) => `<div class="cand"><div class="row"><b>案${k + 1}</b>${r.hardViol ? `<span class="badge">必須違反${r.hardViol}</span>` : r.soft ? `<span class="badge soft">できれば違反${r.soft}</span>` : `<span class="badge" style="background:var(--ok-c);color:var(--ok)">全条件OK</span>`}<span class="grow"></span><button class="btn filled sm" data-adopt="${k}">採用</button></div><div style="overflow:auto"><div class="board" style="--cw:${cw}px;--cf:${cf}px;grid-template-columns:repeat(${L.cols},var(--cw))">${viewOrder().map(i => { const c = L.cells[i]; if (!c.s) return '<div class="cell" style="background:transparent"></div>'; const m = r.assign[i] ? memberById(r.assign[i]) : null; return `<div class="cell seat" data-g="${c.g}">${m ? esc(cf ? m.name : m.name.slice(0, 1)) : ''}</div>`; }).join('')}</div></div></div>`).join('')}</div>`,
+    actions: [{ label: '閉じる' }]
+  });
+  $$('[data-adopt]', d.el).forEach(b => b.onclick = () => { pushUndo(); adoptResult(outs[+b.dataset.adopt]); d.close(); });
+}
+
+/* ----- officers ----- */
+function renderOfficerCard() {
+  const host = $('#offCard'); if (!host) return;
+  S.off = S.off || { n: 1, mode: 'any', tags: [], excl: true, deputy: false }; S.officerHist = S.officerHist || [];
+  const o = S.off, offs = S.members.filter(m => m.tags.includes('学級委員')), deps = S.members.filter(m => m.tags.includes('副学級委員'));
+  const gt = allTags().filter(t => !ROLES.includes(t));
+  host.innerHTML = `<h3><span class="ms fill" style="color:#e0a100">star</span>学級委員を決める</h3>
+  <div class="chips">${offs.map(m => `<span class="chip sel">${esc(m.name)}</span>`).join('') || '<span class="sub">学級委員は未設定です</span>'}${deps.map(m => `<span class="chip">副: ${esc(m.name)}</span>`).join('')}</div>
+  <div class="row"><label class="field" style="width:96px"><span>人数</span><input type="number" id="ofN" min="1" max="8" value="${o.n}"></label>
+  <div class="seg" id="ofMode"><button data-v="any" class="${o.mode === 'any' ? 'on' : ''}">全員から</button><button data-v="tag" class="${o.mode === 'tag' ? 'on' : ''}">タグごとに</button></div></div>
+  ${o.mode === 'tag' ? `<div><div class="lbl">各タグから${o.n}名ずつ選びます</div><div class="chips">${gt.map(t => `<button class="chip ${o.tags.includes(t) ? 'sel' : ''}" data-ot="${esc(t)}">${esc(t)}</button>`).join('') || '<span class="sub">タグがありません</span>'}</div></div>` : ''}
+  <label class="switch"><input type="checkbox" id="ofEx" ${o.excl ? 'checked' : ''}><span class="grow">過去に務めた人を除く<div class="sub">経験者 ${S.officerHist.length}名</div></span></label>
+  <label class="switch"><input type="checkbox" id="ofDep" ${o.deputy ? 'checked' : ''}><span>副学級委員も選ぶ</span></label>
+  <div class="row"><button class="btn filled" id="ofGo"><span class="ms">casino</span>抽選する</button><button class="btn text" id="ofClr">役職を解除</button><button class="btn text" id="ofHist" ${S.officerHist.length ? '' : 'disabled'}>経験者をリセット</button></div>`;
+  $('#ofN').onchange = e => { o.n = clamp(+e.target.value || 1, 1, 8); save(); renderOfficerCard(); };
+  $('#ofMode').onclick = e => { const b = e.target.closest('button'); if (b) { o.mode = b.dataset.v; save(); renderOfficerCard(); } };
+  $$('[data-ot]', host).forEach(b => b.onclick = () => { const t = b.dataset.ot; o.tags = o.tags.includes(t) ? o.tags.filter(x => x !== t) : [...o.tags, t]; save(); renderOfficerCard(); });
+  $('#ofEx').onchange = e => { o.excl = e.target.checked; save(); }; $('#ofDep').onchange = e => { o.deputy = e.target.checked; save(); };
+  $('#ofClr').onclick = () => { S.members.forEach(m => m.tags = m.tags.filter(t => t !== '学級委員' && t !== '副学級委員')); save(); renderMembers(); };
+  $('#ofHist').onclick = () => { S.officerHist = []; save(); renderOfficerCard(); };
+  $('#ofGo').onclick = officerDraw;
+}
+function pickOfficers() {
+  const o = S.off, hist = new Set(S.officerHist), pool = presentList();
+  const sh = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = (l, n) => { const ord = o.excl ? [...sh(l.filter(m => !hist.has(m.id))), ...sh(l.filter(m => hist.has(m.id)))] : sh(l); return ord.slice(0, n); };
+  const groups = o.mode === 'tag' && o.tags.length ? o.tags.map(t => pool.filter(m => m.tags.includes(t))) : [pool];
+  const chosen = []; groups.forEach(g => chosen.push(...pick(g.filter(m => !chosen.includes(m)), o.n)));
+  const dep = []; if (o.deputy) groups.forEach(g => dep.push(...pick(g.filter(m => !chosen.includes(m) && !dep.includes(m)), o.n)));
+  return { chosen, dep };
+}
+function officerDraw() {
+  if (presentList().length < 1) { snack('出席者がいません'); return; }
+  let cur = null, tm = null;
+  const run = el => {
+    clearInterval(tm); const box = $('#offRoll', el), names = presentList().map(m => m.name); cur = pickOfficers(); let t = 0;
+    $('#offOk', el) && ($('#offOk', el).disabled = true);
+    tm = setInterval(() => { t += 70; box.innerHTML = `<span class="ms" style="font-size:40px;color:#e0a100">casino</span><div>${esc(names[Math.floor(Math.random() * names.length)])}</div>`; beep(300 + Math.random() * 400, .03, 'square', .02); if (t >= 1400) { clearInterval(tm); box.innerHTML = `<div class="chips" style="justify-content:center">${cur.chosen.map(m => `<span class="chip sel" style="height:48px;font-size:22px"><span class="ms fill" style="color:#e0a100">star</span>${esc(m.name)}</span>`).join('')}</div>${cur.dep.length ? `<div class="sub" style="margin-top:8px">副学級委員</div><div class="chips" style="justify-content:center">${cur.dep.map(m => `<span class="chip" style="height:40px;font-size:18px">${esc(m.name)}</span>`).join('')}</div>` : ''}`; [523, 659, 784].forEach((f, n) => setTimeout(() => beep(f, .15, 'triangle', .06), n * 120)); const ok = $('#offOk', el); if (ok) ok.disabled = false; } }, 70);
+  };
+  const d = dialog({
+    title: '学級委員の抽選', icon: 'star', body: '<div id="offRoll" style="text-align:center;font-size:30px;font-weight:700;min-height:130px;display:grid;place-items:center;gap:8px"></div>',
+    actions: [{ label: 'キャンセル', onClick: () => { clearInterval(tm); } }, { label: 'もう一度', kind: 'outlined', icon: 'replay', onClick: () => { run(d.el); return false; } }, {
+      label: 'この結果に決定', kind: 'filled', icon: 'check', onClick: () => {
+        clearInterval(tm); if (!cur) return false;
+        S.members.forEach(m => m.tags = m.tags.filter(t => t !== '学級委員' && t !== '副学級委員'));
+        cur.chosen.forEach(m => m.tags.push('学級委員')); cur.dep.forEach(m => m.tags.push('副学級委員'));
+        S.officerHist = [...new Set([...S.officerHist, ...cur.chosen.map(m => m.id)])]; save(); renderMembers(); snack('学級委員を設定しました');
+      }
+    }]
+  });
+  const ok = [...$$('footer button', d.el)].pop(); ok.id = 'offOk'; run(d.el);
+}
+
+/* ----- image / print ----- */
+const G_HEX = ['#e3e9ea', '#ffd9de', '#ffdcc2', '#f5e29a', '#c4ecb4', '#b1ecdc', '#bde2ff', '#dcd2ff', '#f6d0ee'];
+let picOpt = { title: '席替え結果', date: true, nums: true, tags: false, star: true, cw: 112, orient: 'landscape' };
+function rr(x, a, b, w, h, r, f) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, w, h, r); else x.rect(a, b, w, h); x.fillStyle = f; x.fill(); }
+function buildCanvas(o) {
+  const L = S.layout, res = S.result, cols = L.cols, rows = L.rows, nums = seatNumbers(), order = viewOrder();
+  const cw = o.cw, ch = o.tags ? 70 : 60, gap = 8, pad = 28, head = 62, tb = L.teacher ? 44 : 0, tg = L.teacher ? 14 : 0;
+  const W = pad * 2 + cols * cw + (cols - 1) * gap, H = pad * 2 + head + rows * ch + (rows - 1) * gap + tb + tg;
+  const sc = o.scale || 2, cv = document.createElement('canvas'); cv.width = W * sc; cv.height = H * sc;
+  const x = cv.getContext('2d'); x.scale(sc, sc);
+  const FF = '"Noto Sans JP","Hiragino Sans","Yu Gothic",Meiryo,sans-serif';
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic';
+  x.fillStyle = '#171d1e'; x.font = `700 26px ${FF}`; x.fillText(o.title || '', pad, pad + 26);
+  if (o.date) { x.font = `400 14px ${FF}`; x.fillStyle = '#6f797a'; x.textAlign = 'right'; x.fillText(new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }), W - pad, pad + 26); x.textAlign = 'left'; }
+  let y = pad + head;
+  const teacher = yy => { rr(x, pad + (W - pad * 2) * .2, yy, (W - pad * 2) * .6, tb, 12, '#d3e4ff'); x.fillStyle = '#041c35'; x.font = `500 16px ${FF}`; x.textAlign = 'center'; x.fillText('教卓・黒板', W / 2, yy + tb / 2 + 6); x.textAlign = 'left'; };
+  if (L.teacher && S.view === 'teacher') { teacher(y); y += tb + tg; }
+  order.forEach((idx, k) => {
+    const c = L.cells[idx]; if (!c.s) return; const r = Math.floor(k / cols), cc = k % cols, px = pad + cc * (cw + gap), py = y + r * (ch + gap);
+    rr(x, px, py, cw, ch, 12, G_HEX[c.g] || G_HEX[0]);
+    const id = res && res.assign[idx], m = id ? memberById(id) : null;
+    if (o.nums) { x.fillStyle = '#6f797a'; x.font = `400 10px ${FF}`; x.fillText(String(nums[idx]), px + 7, py + 14); }
+    const nm = m ? m.name : '空席'; let fs = 22; x.font = `700 ${fs}px ${FF}`; while (x.measureText(nm).width > cw - 16 && fs > 9) { fs--; x.font = `700 ${fs}px ${FF}`; }
+    x.fillStyle = m ? '#171d1e' : '#9aa3a5'; x.textAlign = 'center'; x.fillText(nm, px + cw / 2, py + (o.tags ? ch / 2 : ch / 2 + 8));
+    if (o.tags && m) { x.font = `400 11px ${FF}`; x.fillStyle = '#3f484a'; x.fillText(m.tags.filter(t => t !== '学級委員' && t !== '副学級委員').slice(0, 2).join(' / '), px + cw / 2, py + ch - 12); }
+    x.textAlign = 'left';
+    if (o.star && m && (m.tags.includes('学級委員') || m.tags.includes('副学級委員'))) { x.font = `400 16px ${FF}`; x.fillStyle = '#e0a100'; x.textAlign = 'right'; x.fillText(m.tags.includes('学級委員') ? '★' : '☆', px + cw - 6, py + 17); x.textAlign = 'left'; }
+  });
+  if (L.teacher && S.view === 'student') teacher(y + rows * ch + (rows - 1) * gap + tg);
+  return cv;
+}
+function pictureDialog() {
+  if (!S.result) { snack('先に席替えを実行してください'); return; }
+  const o = picOpt;
+  const d = dialog({
+    title: '画像・印刷', icon: 'image', wide: true,
+    body: `<div id="pvHost" style="overflow:auto;text-align:center"></div>
+    <div class="row"><label class="field grow" style="min-width:200px"><span>タイトル</span><input id="pvTitle" value="${esc(o.title)}"></label>
+    <div class="seg" id="pvSize"><button data-v="112" class="${o.cw === 112 ? 'on' : ''}">標準</button><button data-v="150" class="${o.cw === 150 ? 'on' : ''}">大きめ</button></div>
+    <div class="seg" id="pvOr"><button data-v="landscape" class="${o.orient === 'landscape' ? 'on' : ''}">A4 横</button><button data-v="portrait" class="${o.orient === 'portrait' ? 'on' : ''}">A4 縦</button></div></div>
+    <div class="row">${[['date', '日付'], ['nums', '席番号'], ['tags', 'タグ'], ['star', '学級委員マーク']].map(([k, l]) => `<label class="chip ${o[k] ? 'sel' : ''}" style="cursor:pointer"><input type="checkbox" data-pk="${k}" ${o[k] ? 'checked' : ''} hidden>${l}</label>`).join('')}</div>`,
+    actions: [{ label: '閉じる' }, { label: 'クリップボードにコピー', icon: 'content_copy', kind: 'outlined', onClick: () => { copyImage(); return false; } }, { label: '印刷', icon: 'print', kind: 'tonal', onClick: () => { doPrint(); return false; } }, { label: 'PNGを保存', icon: 'download', kind: 'filled', onClick: () => { saveImage(); return false; } }]
+  });
+  const draw = () => { const cv = buildCanvas({ ...o, scale: 1.5 }); cv.className = 'pv'; cv.style.width = cv.width / 1.5 + 'px'; $('#pvHost', d.el).replaceChildren(cv); };
+  $('#pvTitle', d.el).oninput = e => { o.title = e.target.value; draw(); };
+  $('#pvSize', d.el).onclick = e => { const b = e.target.closest('button'); if (!b) return; o.cw = +b.dataset.v; $$('#pvSize button', d.el).forEach(x => x.classList.toggle('on', x === b)); draw(); };
+  $('#pvOr', d.el).onclick = e => { const b = e.target.closest('button'); if (!b) return; o.orient = b.dataset.v; $$('#pvOr button', d.el).forEach(x => x.classList.toggle('on', x === b)); };
+  $$('[data-pk]', d.el).forEach(i => i.onchange = () => { o[i.dataset.pk] = i.checked; i.parentElement.classList.toggle('sel', i.checked); draw(); });
+  draw();
+}
+const canvasBlob = (o, sc) => new Promise(res => buildCanvas({ ...o, scale: sc }).toBlob(res, 'image/png'));
+async function saveImage() { const b = await canvasBlob(picOpt, 2); if (!b) { snack('画像を作成できませんでした'); return; } const fn = `席替え_${new Date().toISOString().slice(0, 10)}.png`; await saveFile(fn, b); }
+async function copyImage() { try { const b = await canvasBlob(picOpt, 2); await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); snack('画像をコピーしました'); } catch (e) { snack('この環境では画像をコピーできません。「PNGを保存」をお使いください', 4500); } }
+function doPrint() {
+  if (window.claude) { snack('印刷はGitHub Pagesなどの公開版で使えます。ここでは「PNGを保存」をお使いください', 5000); return; }
+  const cv = buildCanvas({ ...picOpt, scale: 3 }); $('#printSheet').innerHTML = `<img src="${cv.toDataURL('image/png')}" alt="座席表">`;
+  let st = $('#pageStyle'); if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); } st.textContent = `@page{size:A4 ${picOpt.orient};margin:8mm}`;
+  setTimeout(() => { try { window.print(); } catch (e) { snack('印刷を開始できませんでした'); } }, 150);
+}
+async function saveFile(filename, data) {
+  const isBlob = typeof Blob !== 'undefined' && data instanceof Blob;
+  if (caps.downloads) { try { await caps.downloads.save({ filename, data }); return true; } catch (e) { if (e && e.code === 'declined') return false; } }
+  if (!window.claude) { try { const blob = isBlob ? data : new Blob([data], { type: 'text/plain;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); snack('保存しました'); return true; } catch (e) { } }
+  if (!isBlob) return copyText(data, 'ファイル保存が使えないため、内容をコピーしました');
+  snack('この環境では画像を保存できません'); return false;
+}
+
+/* ----- slots ----- */
+const slotsGet = () => { try { return JSON.parse(localStorage.getItem(LS + '.slots') || '[]'); } catch (e) { return []; } };
+const slotsSet = a => { try { localStorage.setItem(LS + '.slots', JSON.stringify(a)); } catch (e) { snack('保存できませんでした（容量不足の可能性）'); } };
+function renderSlots() {
+  const host = $('#slotList'); if (!host) return; const sl = slotsGet();
+  host.innerHTML = sl.length ? sl.map(s => `<div class="hist"><span class="ms">folder</span><div class="grow"><div style="font-weight:500">${esc(s.name)}</div><div class="sub">${new Date(s.ts).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div></div><button class="btn tonal sm" data-sl="${s.id}">読み込む</button><button class="icon-btn" data-sd="${s.id}"><span class="ms">delete</span></button></div>`).join('') : '<div class="sub">保存したスロットはまだありません。</div>';
+  $('#slotSave').onclick = () => { const n = $('#slotName').value.trim() || '無題'; const a = slotsGet(); a.unshift({ id: uid(), name: n, ts: Date.now(), data: JSON.stringify(S) }); slotsSet(a.slice(0, 20)); renderSlots(); snack('保存しました'); };
+  $$('[data-sl]', host).forEach(b => b.onclick = () => { const s = slotsGet().find(x => x.id === b.dataset.sl); if (!s) return; S = JSON.parse(s.data); undoStack = []; redoStack = []; save(); snack(`「${s.name}」を読み込みました`); setPage('shuffle'); });
+  $$('[data-sd]', host).forEach(b => b.onclick = () => { slotsSet(slotsGet().filter(x => x.id !== b.dataset.sd)); renderSlots(); });
+}
+function initExtras() {
+  document.addEventListener('keydown', e => {
+    if ($('.scrim')) return; const t = e.target && e.target.tagName; if (/INPUT|TEXTAREA|SELECT/.test(t)) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    else if (e.key === ' ' && S.page === 'shuffle' && t !== 'BUTTON') { e.preventDefault(); runShuffle(); }
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id !== 'bulkFile' || !e.target.files[0]) return; const fr = new FileReader();
+    fr.onload = () => { const ta = $('#bulkTa'); if (ta) ta.value = (ta.value ? ta.value + '\n' : '') + String(fr.result).replace(/\r/g, ''); }; fr.readAsText(e.target.files[0]);
+  });
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.claude) navigator.serviceWorker.register('./sw.js').catch(() => { });
+}
+/* ===== Rule editor ===== */
+function ruleDialog(rule, isTemplate) {
+  const editing = rule && S.rules.includes(rule);
+  const draft = rule ? JSON.parse(JSON.stringify(rule)) : { id: uid(), type: 'near', on: true, hard: true, w: 5, A: { p: [], t: [] }, B: { p: [], t: [] }, rel: 'four', op: 'min', n: 3, metric: 'man', kind: 'sameCol', mode: 'in', seats: [], by: 'group', seat: S.layout.cells.findIndex(c => c.s) };
+  draft.A = draft.A || { p: [], t: [] }; draft.B = draft.B || { p: [], t: [] };
+  const dlg = dialog({
+    title: editing ? '条件を編集' : '条件を追加', icon: 'rule', wide: true, body: '<div id="rdBody" class="stack" style="gap:20px"></div>',
+    actions: [{ label: 'キャンセル' }, {
+      label: editing ? '更新' : '追加', kind: 'filled', icon: 'check', onClick: () => {
+        const T = RTYPE[draft.type]; const aN = draft.A.p.length + draft.A.t.length, bN = draft.B.p.length + draft.B.t.length;
+        if (!aN) { snack('対象（名前かタグ）を選んでください'); return false; }
+        if (T.B && !T.optB && !bN) { snack('基準となる相手を選んでください'); return false; }
+        if (draft.type === 'area' && !(draft.seats || []).length) { snack('席の範囲を選んでください'); return false; }
+        if (draft.type === 'fix' && !S.layout.cells[draft.seat]?.s) { snack('固定する席を選んでください'); return false; }
+        if (draft.type === 'fix') draft.hard = true;
+        if (editing) Object.assign(rule, draft); else S.rules.push(draft);
+        save(); renderRules(); snack(editing ? '条件を更新しました' : '条件を追加しました');
+      }
+    }]
+  });
+  const root = dlg.el, nums = seatNumbers();
+  const picker = (key, label, hint) => `<div><div class="lbl">${label}${hint ? `<span style="font-weight:400"> ${hint}</span>` : ''}</div><div class="chips scroll" data-pk="${key}">${tagUniverse().map(t => `<button type="button" class="chip tag-chip ${draft[key].t.includes(t) ? 'sel' : ''}" data-tag="${esc(t)}"><span class="ms sm">sell</span>${esc(t)}</button>`).join('')}${S.members.map(m => `<button type="button" class="chip ${draft[key].p.includes(m.id) ? 'sel' : ''}" data-mid="${m.id}">${esc(m.name)}</button>`).join('') || '<span class="sub">先に「名前」でメンバーを追加してください</span>'}</div></div>`;
+  const seatBoard = (multi) => `<div class="board-wrap" style="padding:0"><div class="board" id="rdBoard" style="--cw:44px;--ch:38px;grid-template-columns:repeat(${S.layout.cols},var(--cw))">${S.layout.cells.map((c, i) => { if (!c.s) return `<div class="cell void" style="opacity:.2;border:0"></div>`; const on = multi ? (draft.seats || []).includes(i) : draft.seat === i; return `<div class="cell seat ${on ? (multi && draft.mode === 'out' ? 'pickno' : 'pick') : ''}" data-i="${i}" data-g="${c.g}" style="cursor:pointer"><span style="font-weight:700;font-size:13px">${nums[i]}</span></div>`; }).join('')}</div></div>`;
+  const segHTML = (id, opts, cur) => `<div class="seg" id="${id}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" class="${cur === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  function render() {
+    const T = RTYPE[draft.type]; const bodyEl = $('#rdBody', root); const st = $('.body', root).scrollTop;
+    let h = `<div><div class="lbl">条件のタイプ</div><div class="chips">${Object.entries(RTYPE).map(([k, t]) => `<button type="button" class="chip ${draft.type === k ? 'sel' : ''}" data-type="${k}" title="${esc(t.desc)}"><span class="ms sm">${t.icon}</span>${t.label}</button>`).join('')}</div><div class="sub" style="margin-top:6px">${esc(T.desc)}</div></div>`;
+    h += `<div class="sentence" id="rdSentence"></div>`;
+    h += picker('A', draft.type === 'near' ? '対象（この人を置く）' : draft.type === 'spread' ? '分散させる人' : '対象', 'タグも選べます');
+    if (T.B) h += picker('B', draft.type === 'near' ? '基準となる人（この人の近くに）' : '相手', T.optB ? '省略すると対象どうしに適用' : '');
+    if (draft.type === 'near') h += `<label class="field"><span>位置関係</span><select id="rdRel">${Object.entries(REL).map(([k, v]) => `<option value="${k}" ${draft.rel === k ? 'selected' : ''}>${{ four: '前後左右のどこか', lr: '左右（隣）のどちらか', fb: '前か後ろ', eight: '周囲8マス（斜めを含む）', diag: '斜め', front: 'Bの真前', back: 'Bの真後ろ', left: 'Bの左隣', right: 'Bの右隣' }[k]}</option>`).join('')}</select></label>`;
+    if (draft.type === 'apart') h += `<label class="field"><span>隣り合わせとみなす範囲</span><select id="rdRel">${['four', 'lr', 'fb', 'eight', 'diag'].map(k => `<option value="${k}" ${draft.rel === k ? 'selected' : ''}>${{ four: '前後左右', lr: '左右（隣）', fb: '前後', eight: '周囲8マス（斜めを含む）', diag: '斜め' }[k]}</option>`).join('')}</select></label>`;
+    if (draft.type === 'dist') h += `<div class="row">${segHTML('rdOp', [['min', 'N マス以上離す'], ['max', 'N マス以内に置く']], draft.op)}<label class="field" style="width:110px"><span>N</span><input type="number" id="rdN" min="1" max="20" value="${draft.n}"></label></div>${'' }<label class="field"><span>距離の数え方</span><select id="rdMetric"><option value="man" ${draft.metric === 'man' ? 'selected' : ''}>縦横の歩数（前1+右2＝3マス）</option><option value="cheb" ${draft.metric === 'cheb' ? 'selected' : ''}>斜めも1マス（周囲8マス＝1マス）</option></select></label>`;
+    if (draft.type === 'area') h += `<div>${segHTML('rdMode', [['in', '範囲の中に座る'], ['out', '範囲には座らない']], draft.mode)}</div>
+      <div><div class="lbl">席の範囲（タップで選択／赤は禁止席）</div><div class="chips" style="margin-bottom:8px">${Object.entries(PRESET_LABEL).map(([k, l]) => `<button type="button" class="chip" data-preset="${k}">${l}</button>`).join('')}<button type="button" class="chip" data-preset="invert"><span class="ms sm">flip</span>反転</button><button type="button" class="chip" data-preset="none"><span class="ms sm">backspace</span>解除</button></div>${seatBoard(true)}</div>`;
+    if (draft.type === 'fix') h += `<div><div class="lbl">固定する席をタップ</div>${seatBoard(false)}</div>`;
+    if (draft.type === 'line') h += `<label class="field"><span>条件</span><select id="rdKind">${[['sameRow', '同じ行（横一列に並べる）'], ['sameCol', '同じ列（縦一列に並べる）'], ['diffRow', '別の行にする'], ['diffCol', '別の列にする']].map(([v, l]) => `<option value="${v}" ${draft.kind === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+    if (draft.type === 'group') h += `<div>${segHTML('rdKind2', [['same', '同じ班にする'], ['diff', '別の班にする']], draft.kind === 'same' || draft.kind === 'diff' ? draft.kind : 'diff')}</div>${S.layout.cells.some(c => c.g) ? '' : '<div class="banner warn"><span class="ms">info</span><div>班が設定されていません。「レイアウト」で班を塗ってください。</div></div>'}`;
+    if (draft.type === 'spread') h += `<div>${segHTML('rdBy', [['group', '各班に'], ['row', '各行に'], ['col', '各列に']], draft.by)}</div>`;
+    if (draft.type !== 'fix') h += `<div><div class="lbl">厳しさ</div>${segHTML('rdHard', [['1', '必須（絶対に守る）'], ['0', 'できれば（なるべく）']], draft.hard ? '1' : '0')}${draft.hard ? '' : `<div style="margin-top:12px"><div class="lbl">優先度 ★<b id="rdWv">${draft.w}</b>（大きいほど優先）</div><input type="range" id="rdW" min="1" max="10" value="${draft.w}"></div>`}</div>`;
+    bodyEl.innerHTML = h; $('.body', root).scrollTop = st; sentence(); bind();
+  }
+  function sentence() { const s = $('#rdSentence', root); if (s) s.innerHTML = ruleSentence({ ...draft, hard: draft.hard }); }
+  function bind() {
+    $$('[data-type]', root).forEach(b => b.onclick = () => { draft.type = b.dataset.type; if (draft.type === 'group' && !['same', 'diff'].includes(draft.kind)) draft.kind = 'diff'; if (draft.type === 'line' && !/Row|Col/.test(draft.kind)) draft.kind = 'sameCol'; if (draft.type === 'apart' && !['four', 'lr', 'fb', 'eight', 'diag'].includes(draft.rel)) draft.rel = 'four'; render(); });
+    $$('[data-pk]', root).forEach(box => box.onclick = e => {
+      const b = e.target.closest('button'); if (!b) return; const k = box.dataset.pk, sel = draft[k];
+      const tog = (arr, v) => { const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); };
+      if (b.dataset.tag) tog(sel.t, b.dataset.tag); else tog(sel.p, b.dataset.mid);
+      b.classList.toggle('sel'); sentence();
+    });
+    const sel = (id, k, num) => { const i = $(id, root); if (i) i.onchange = () => { draft[k] = num ? +i.value : i.value; sentence(); }; };
+    sel('#rdRel', 'rel'); sel('#rdMetric', 'metric'); sel('#rdKind', 'kind');
+    const n = $('#rdN', root); if (n) n.oninput = () => { draft.n = clamp(+n.value || 1, 1, 20); sentence(); };
+    const sg = (id, fn) => { const s = $(id, root); if (s) s.onclick = e => { const b = e.target.closest('button'); if (b) { fn(b.dataset.v); render(); } }; };
+    sg('#rdOp', v => draft.op = v); sg('#rdMode', v => draft.mode = v); sg('#rdKind2', v => draft.kind = v); sg('#rdBy', v => draft.by = v); sg('#rdHard', v => draft.hard = v === '1');
+    const w = $('#rdW', root); if (w) w.oninput = () => { draft.w = +w.value; $('#rdWv', root).textContent = w.value; sentence(); };
+    const bd = $('#rdBoard', root);
+    if (bd) bd.onclick = e => {
+      const c = e.target.closest('.cell[data-i]'); if (!c) return; const i = +c.dataset.i;
+      if (draft.type === 'fix') { draft.seat = i; render(); return; }
+      const s = draft.seats = draft.seats || []; const k = s.indexOf(i); if (k >= 0) s.splice(k, 1); else s.push(i); delete draft.preset; render();
+    };
+    $$('[data-preset]', root).forEach(b => b.onclick = () => {
+      const p = b.dataset.preset;
+      if (p === 'none') { draft.seats = []; delete draft.preset; } else if (p === 'invert') { const cur = new Set(draft.seats); draft.seats = S.layout.cells.map((c, i) => c.s && !cur.has(i) ? i : -1).filter(i => i >= 0); delete draft.preset; } else { draft.seats = seatsByPreset(S.layout, p); draft.preset = p; }
+      render();
+    });
+  }
+  render();
+}
+
+/* ===== AI rule input ===== */
+function aiDialog() {
+  const nums = seatNumbers();
+  const d = dialog({
+    title: '文章でAIに条件を追加', icon: 'auto_awesome', wide: true,
+    body: `<div class="sub">日本語で条件を書くと、AIが条件に変換します。複数の条件も一度に書けます。内容は追加前に確認できます。</div>
+    <label class="field"><span>条件の文章</span><textarea id="aiTa" rows="5" placeholder="例:\n・田中は佐藤の隣にしたい\n・木村と小林は3マス以上離す\n・視力の人は前の2列\n・男子同士は隣にしない（できれば）"></textarea></label>
+    <div class="row"><button class="btn filled" id="aiGo"><span class="ms">auto_awesome</span>条件に変換</button><span class="sub" id="aiSt"></span></div><div id="aiOut" class="stack"></div>`,
+    actions: [{ label: '閉じる' }]
+  });
+  $('#aiGo', d.el).onclick = async () => {
+    const text = $('#aiTa', d.el).value.trim(); if (!text) return;
+    const st = $('#aiSt', d.el), out = $('#aiOut', d.el); st.textContent = '解析中…'; out.innerHTML = '';
+    const prompt = `あなたは席替えアプリの条件パーサです。ユーザーの文章を、次のJSON配列に変換してください。JSONのみを返します。
+メンバー名: ${JSON.stringify(S.members.map(m => m.name))}
+タグ: ${JSON.stringify(allTags())}
+座席: ${S.layout.rows}行×${S.layout.cols}列、席番号は1〜${seatCount()}（左上から右へ連番、通路は番号なし）。上＝教卓側（前）。
+各要素のスキーマ:
+{"type":"near|apart|dist|area|fix|line|group|spread",
+ "A":{"names":[],"tags":[]}, "B":{"names":[],"tags":[]},
+ "rel":"four|lr|fb|eight|diag|front|back|left|right", // near/apart用。前後左右=four, 隣=lr, 斜め含む周囲=eight, Bの真前にA=front
+ "op":"min|max","n":数値,"metric":"man|cheb", // dist用。「N席以上離す」=min
+ "kind":"sameRow|sameCol|diffRow|diffCol" または "same|diff"(group用),
+ "mode":"in|out","area":"front1|front2|front3|back1|back2|back3|left1|left2|right1|right2|centerCol|edgeCol|frontHalf|backHalf" または "seatNumbers":[席番号], // area用
+ "seatNumber":席番号, // fix用
+ "by":"group|row|col", // spread用
+ "hard":true|false, // 「できれば」「なるべく」はfalse、それ以外true
+ "w":1〜10 // hard=falseのときの優先度}
+nameやtagは上のリストにあるものだけを使う。該当が無い場合は無視する。
+文章:
+${text}`;
+    try {
+      const arr = await caps.sample.json(prompt);
+      const list = (Array.isArray(arr) ? arr : arr && arr.rules ? arr.rules : []).map(aiToRule).filter(Boolean);
+      if (!list.length) { st.textContent = ''; out.innerHTML = '<div class="banner warn"><span class="ms">info</span><div>条件に変換できませんでした。メンバー名やタグを含めて書き直してください。</div></div>'; return; }
+      st.textContent = `${list.length}件の候補`;
+      out.innerHTML = list.map((r, i) => `<label class="rule" style="cursor:pointer"><input type="checkbox" checked data-ai="${i}" style="width:20px;height:20px;accent-color:var(--primary)"><div class="txt"><div>${r.hard ? '<span class="badge">必須</span>' : `<span class="badge soft">できれば ★${r.w}</span>`}</div><div>${ruleSentence(r)}</div>${r._warn ? `<div class="sub" style="color:var(--error)">未登録の名前/タグ: ${esc(r._warn)}</div>` : ''}</div></label>`).join('') + `<div><button class="btn filled" id="aiAdd"><span class="ms">add</span>選んだ条件を追加</button></div>`;
+      $('#aiAdd', d.el).onclick = () => { const picks = $$('[data-ai]', d.el).filter(c => c.checked).map(c => list[+c.dataset.ai]); picks.forEach(r => { delete r._warn; S.rules.push(r); }); save(); renderRules(); d.close(); snack(`${picks.length}件の条件を追加しました`); };
+    } catch (e) { st.textContent = ''; out.innerHTML = `<div class="banner"><span class="ms">error</span><div>${e && e.code === 'not_granted' ? 'AIの利用が許可されていません。' : e && e.code === 'rate_limited' ? '少し待ってからもう一度お試しください。' : 'AIによる変換に失敗しました。通常の「条件を追加」をお使いください。'}</div></div>`; }
+  };
+}
+function aiToRule(o) {
+  if (!o || !RTYPE[o.type]) return null;
+  const warn = [];
+  const toSel = s => { const p = [], t = []; ((s && s.names) || []).forEach(n => { const m = S.members.find(x => x.name === n) || S.members.find(x => n && (x.name.includes(n) || n.includes(x.name))); if (m) p.push(m.id); else warn.push(n); }); ((s && s.tags) || []).forEach(g => { if (allTags().includes(g)) t.push(g); else warn.push(g); }); return { p, t }; };
+  const r = { id: uid(), type: o.type, on: true, hard: o.hard !== false, w: clamp(+o.w || 5, 1, 10), A: toSel(o.A), B: toSel(o.B) };
+  if (!r.A.p.length && !r.A.t.length) return null;
+  if (['near'].includes(r.type)) { r.rel = REL[o.rel] ? o.rel : 'four'; if (!r.B.p.length && !r.B.t.length) return null; }
+  if (r.type === 'apart') r.rel = ['four', 'lr', 'fb', 'eight', 'diag'].includes(o.rel) ? o.rel : 'four';
+  if (r.type === 'dist') { r.op = o.op === 'max' ? 'max' : 'min'; r.n = clamp(+o.n || 2, 1, 20); r.metric = o.metric === 'cheb' ? 'cheb' : 'man'; }
+  if (r.type === 'line') r.kind = ['sameRow', 'sameCol', 'diffRow', 'diffCol'].includes(o.kind) ? o.kind : 'diffCol';
+  if (r.type === 'group') r.kind = o.kind === 'same' ? 'same' : 'diff';
+  if (r.type === 'spread') r.by = ['group', 'row', 'col'].includes(o.by) ? o.by : 'group';
+  if (r.type === 'area') {
+    r.mode = o.mode === 'out' ? 'out' : 'in';
+    if (o.area && PRESET_LABEL[o.area]) { r.seats = seatsByPreset(S.layout, o.area); r.preset = o.area; }
+    else { const inv = {}; Object.entries(seatNumbers()).forEach(([ci, n]) => inv[n] = +ci); r.seats = (o.seatNumbers || []).map(n => inv[n]).filter(v => v != null); }
+    if (!r.seats.length) return null;
+  }
+  if (r.type === 'fix') { const inv = {}; Object.entries(seatNumbers()).forEach(([ci, n]) => inv[n] = +ci); r.seat = inv[o.seatNumber]; r.hard = true; if (r.seat == null) return null; }
+  if (warn.length) r._warn = warn.join('、');
+  return r;
+}
+
+/* ===== History / export ===== */
+function gridRows(assign, useView) {
+  const L = S.layout; const rows = [];
+  for (let r = 0; r < L.rows; r++) { const row = []; for (let c = 0; c < L.cols; c++) { const i = r * L.cols + c; row.push(!L.cells[i].s ? '' : assign[i] ? (memberById(assign[i])?.name || '?') : '(空席)'); } rows.push(row); }
+  if (useView && S.view === 'student') { rows.reverse(); rows.forEach(r => r.reverse()); }
+  return rows;
+}
+let exportKind = 'grid';
+function exportText() {
+  const res = S.result; if (!res) return '';
+  if (exportKind === 'grid') { const rows = gridRows(res.assign, true); const hdr = S.layout.teacher && S.view === 'teacher' ? ['【教卓・黒板】'] : []; const ft = S.layout.teacher && S.view === 'student' ? ['【教卓・黒板】'] : []; return [...hdr, ...rows.map(r => r.join('\t')), ...ft].join('\n'); }
+  const nums = seatNumbers(); const L = S.layout;
+  const lines = ['席No,行,列,班,名前,タグ'];
+  S.layout.cells.forEach((c, i) => { if (!c.s) return; const m = res.assign[i] ? memberById(res.assign[i]) : null; lines.push([nums[i], Math.floor(i / L.cols) + 1, i % L.cols + 1, c.g || '', m ? m.name : '(空席)', m ? m.tags.join('/') : ''].join(',')); });
+  return lines.join('\n');
+}
+function histStats() {
+  const L = S.layout, st = {}; S.members.forEach(m => st[m.id] = { n: 0, f: 0, b: 0 });
+  S.history.forEach(h => { if (h.rows !== L.rows || h.cols !== L.cols) return; const rs = [...new Set(Object.keys(h.assign).filter(ci => h.shape[ci] === '1').map(ci => Math.floor(ci / L.cols)))].sort((a, b) => a - b); for (const [ci, id] of Object.entries(h.assign)) { if (!id || !st[id]) continue; const r = Math.floor(ci / L.cols); st[id].n++; if (r === rs[0]) st[id].f++; if (r === rs[rs.length - 1]) st[id].b++; } });
+  return st;
+}
+function renderData() {
+  const el = $('#page-data'); const L = S.layout;
+  el.innerHTML = `
+  <div class="h-row"><h2>履歴・出力</h2><span class="sub">履歴 ${S.history.length}件（このブラウザに保存）</span></div>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+    <div class="stack">
+      <div class="card stack"><h3><span class="ms">ios_share</span>結果の書き出し</h3>
+        ${S.result ? `<div class="seg" id="exSeg"><button data-k="grid" class="${exportKind === 'grid' ? 'on' : ''}">配置表（Excel貼付）</button><button data-k="csv" class="${exportKind === 'csv' ? 'on' : ''}">座席一覧CSV</button></div>
+        <pre class="out" id="exPre">${esc(exportText())}</pre>
+        <div class="row"><button class="btn filled" id="exPic"><span class="ms">image</span>画像・印刷</button><button class="btn tonal" id="exCopy"><span class="ms">content_copy</span>コピー</button><button class="btn tonal" id="exSave"><span class="ms">download</span>ファイルに保存</button></div>` : `<div class="sub">席替えを実行すると、ここに書き出せます。</div>`}
+      </div>
+      <div class="card stack"><h3><span class="ms">backup</span>バックアップ・復元</h3>
+        <div class="sub">名前・レイアウト・条件・履歴をまとめて保存／復元できます。</div>
+        <div class="row"><button class="btn tonal" id="bkCopy"><span class="ms">content_copy</span>コピー</button><button class="btn tonal" id="bkSave"><span class="ms">download</span>ファイルに保存</button></div>
+        <label class="field"><span>復元：バックアップJSONを貼り付け</span><textarea id="bkTa" rows="3"></textarea></label>
+        <div class="row"><button class="btn outlined" id="bkLoad"><span class="ms">upload</span>貼り付けた内容で復元</button><span class="grow"></span><button class="btn text danger" id="bkReset"><span class="ms">restart_alt</span>初期化</button></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card stack"><h3><span class="ms">bookmarks</span>保存スロット</h3><div class="sub">クラスや学期ごとに、設定一式を名前を付けて保存できます。</div><div class="row" style="flex-wrap:nowrap"><label class="field grow"><span>スロット名</span><input id="slotName" placeholder="例: 2年A組"></label><button class="btn tonal" id="slotSave"><span class="ms">save</span>保存</button></div><div id="slotList" class="stack" style="gap:6px"></div></div>
+      <div class="card stack"><h3><span class="ms">history</span>席替え履歴</h3>
+        <div id="histList" class="stack" style="gap:8px"></div></div>
+      <div class="card stack"><h3><span class="ms">leaderboard</span>席の公平性</h3><div class="sub">現在のレイアウトでの過去の実績です。前列・後列に何回座ったかを表示します。</div>
+        <div style="overflow:auto;max-height:300px"><table style="border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums"><thead><tr style="text-align:left;color:var(--on-surface-v);font-size:12px"><th style="padding:4px 8px">名前</th><th>回数</th><th>前列</th><th>後列</th></tr></thead><tbody id="statBody"></tbody></table></div></div>
+    </div>
+  </div>`;
+  const hl = $('#histList');
+  hl.innerHTML = S.history.length ? S.history.map((h, k) => {
+    const old = S.history[k + 1]; let diff = '';
+    if (old) { const pos = a => { const o = {}; Object.entries(a).forEach(([ci, id]) => id && (o[id] = ci)); return o; }; const a = pos(h.assign), b = pos(old.assign); diff = `前回から ${Object.keys(a).filter(id => b[id] != null && b[id] !== a[id]).length}人が移動`; }
+    const mini = h.shape.split('').map(ch => ch === '1' ? '<div class="cell seat"></div>' : '<div class="cell" style="background:transparent"></div>').join('');
+    return `<div class="hist"><div class="board mini" style="grid-template-columns:repeat(${h.cols},var(--cw));flex:none;max-width:120px;overflow:hidden">${mini}</div><div class="grow"><div style="font-weight:500">${new Date(h.ts).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${S.result && S.result.hid === h.id ? ' <span class="chip tag">表示中</span>' : ''}</div><div class="sub">${esc(diff)}${h.seed ? ` ・シード「${esc(h.seed)}」` : ''}</div></div>
+      <button class="icon-btn" data-hshow="${h.id}" title="この配置を表示"><span class="ms">open_in_new</span></button><button class="icon-btn" data-hdel="${h.id}" title="削除"><span class="ms">delete</span></button></div>`;
+  }).join('') : '<div class="sub">まだ履歴がありません。</div>';
+  $$('[data-hshow]').forEach(b => b.onclick = () => { const h = S.history.find(x => x.id === b.dataset.hshow); if (h.shape !== L.cells.map(c => c.s ? 1 : 0).join('') || h.cols !== L.cols) { snack('現在のレイアウトと形が異なるため表示できません'); return; } const a = {}; L.cells.forEach((c, i) => { if (c.s) a[i] = (h.assign[i] && memberById(h.assign[i])) ? h.assign[i] : null; }); S.result = { assign: a, hid: h.id, locked: [] }; hiddenSet.clear(); save(); setPage('shuffle'); });
+  $$('[data-hdel]').forEach(b => b.onclick = () => { S.history = S.history.filter(h => h.id !== b.dataset.hdel); save(); renderData(); });
+  const st = histStats();
+  $('#statBody').innerHTML = S.members.map(m => `<tr style="border-top:1px solid var(--outline-v)"><td style="padding:6px 8px">${esc(m.name)}</td><td>${st[m.id].n}</td><td>${st[m.id].f}</td><td>${st[m.id].b}</td></tr>`).join('');
+  renderSlots();
+  if (S.result) {
+    $('#exSeg').onclick = e => { const b = e.target.closest('button'); if (b) { exportKind = b.dataset.k; renderData(); } };
+    $('#exPic').onclick = pictureDialog;
+    $('#exCopy').onclick = () => copyText(exportText());
+    $('#exSave').onclick = () => saveFile(exportKind === 'grid' ? 'seating.txt' : 'seating.csv', (exportKind === 'csv' ? '﻿' : '') + exportText());
+  }
+  const json = () => JSON.stringify(S);
+  $('#bkCopy').onclick = () => copyText(json(), 'バックアップをコピーしました');
+  $('#bkSave').onclick = () => saveFile('seating-backup.json', json());
+  $('#bkLoad').onclick = () => { try { const o = JSON.parse($('#bkTa').value); if (!o || o.v !== 1 || !Array.isArray(o.members) || !o.layout) throw 0; S = o; save(); snack('復元しました'); setPage('shuffle'); } catch (e) { snack('復元できませんでした。バックアップJSONを確認してください'); } };
+  $('#bkReset').onclick = () => confirmDlg('すべてのデータを削除して、サンプルの状態に戻します。よろしいですか？', '初期化する', () => { S = defaultState(); lastFail = null; hiddenSet.clear(); save(); setPage('shuffle'); });
+}
+
+/* ===== init ===== */
+(function init() {
+  $$('.nav').forEach(b => b.onclick = () => { clearTimers(); setPage(b.dataset.page); });
+  let theme = 'auto'; try { theme = localStorage.getItem('sekigae.theme') || 'auto'; } catch (e) { }
+  const applyTheme = () => { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); };
+  applyTheme();
+  $('#btnTheme').onclick = () => { theme = theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto'; try { localStorage.setItem('sekigae.theme', theme); } catch (e) { } applyTheme(); snack({ auto: 'テーマ: 端末に合わせる', dark: 'テーマ: ダーク', light: 'テーマ: ライト' }[theme]); };
+  $('#btnFs').onclick = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => snack('この環境では全画面にできません')); } catch (e) { snack('この環境では全画面にできません'); } };
+  setPage(S.page || 'shuffle'); initExtras();
+  if (window.claude && claude.use) {
+    claude.use('sample').then(s => { if (s) { caps.sample = s; if (S.page === 'rules') renderRules(); } }).catch(() => { });
+    claude.use('downloads').then(d => { if (d) caps.downloads = d; }).catch(() => { });
+  }
+})();
+</script></body></html>
