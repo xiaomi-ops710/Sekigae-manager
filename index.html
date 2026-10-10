@@ -1675,6 +1675,7 @@ async function fbInit() {
     if (sdk.getRedirectResult) sdk.getRedirectResult(cloud.auth).catch(e => { cloud.redirectErr = e; if (need && !cloud.user) gate('login', authMsg(e)); });
     cloud.authTimer = setTimeout(() => { if (need && !cloud.user) gate('retry', 'サーバーから応答がありません。通信状況を確認して、再読み込みしてください。'); }, 12000);
     sdk.onAuthStateChanged(cloud.auth, onUser);
+    const pt = pendingTok(); if (pt) { dlog('resume pending token'); clearTimeout(cloud.authTimer); credLogin(pt); }
   } catch (e) { console.error(e); if (need) gate('retry', 'Firebaseに接続できません。ネットワークと設定（firebase-config.js）を確認してください。'); else snack('クラウド同期を初期化できませんでした'); }
 }
 function setStatus(s) { if (!cloud) return; cloud.status = s; renderCloudBtn(); }
@@ -1686,6 +1687,8 @@ function renderCloudBtn() {
 async function onUser(user) {
   dlog('authState ' + (user ? 'user ' + (user.email || user.uid) : 'null'));
   const need = FB.requireLogin !== false; clearTimeout(cloud.authTimer);
+  if (!user && cloud.signing) return;
+  cloud.signing = false;
   if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
   const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
   if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
@@ -1734,6 +1737,29 @@ function makeAuth(sdk, app) {
 const DK = 'sekigae.diag';
 function dlog(m) { try { const a = JSON.parse(localStorage.getItem(DK) || '[]'); a.push(new Date().toTimeString().slice(0, 8) + ' ' + m); localStorage.setItem(DK, JSON.stringify(a.slice(-14))); } catch (e) { } }
 function dget() { try { return JSON.parse(localStorage.getItem(DK) || '[]'); } catch (e) { return []; } }
+const PK = 'sekigae.pendingTok';
+async function credLogin(tok) {
+  const { sdk, auth } = cloud, need = FB.requireLogin !== false;
+  cloud.signing = true;
+  try {
+    if (need) gate('loading', 'ログインしています…');
+    const cr = sdk.GoogleAuthProvider.credential(null, tok);
+    let u = null, err = null;
+    for (let k = 0; k < 5 && !u; k++) {
+      if (document.visibilityState !== 'visible') await new Promise(rs => { const f = () => { if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', f); rs(); } }; document.addEventListener('visibilitychange', f); setTimeout(rs, 4000); });
+      await new Promise(rs => setTimeout(rs, k ? 700 * k : 400));
+      try { u = await sdk.signInWithCredential(auth, cr); } catch (e) { err = e; dlog('try' + (k + 1) + ' ' + (e && e.code)); if (!(e && e.code === 'auth/network-request-failed')) throw e; }
+    }
+    if (!u) throw err;
+    try { localStorage.removeItem(PK); } catch (e) { }
+    dlog('credential ok'); if (u && u.user && !cloud.user) onUser(u.user);
+  } catch (e) {
+    cloud.signing = false; dlog('fail ' + (e && (e.code || e.message)));
+    if (!(e && e.code === 'auth/network-request-failed')) { try { localStorage.removeItem(PK); } catch (x) { } }
+    const m = authMsg(e); if (need) gate('login', m); else snack(m, 5000);
+  }
+}
+function pendingTok() { try { const o = JSON.parse(localStorage.getItem(PK) || 'null'); if (o && Date.now() - o.ts < 5 * 60 * 1000) return o.t; localStorage.removeItem(PK); } catch (e) { } return null; }
 let gisP = null;
 function loadGis() {
   if (gisP) return gisP;
@@ -1749,14 +1775,8 @@ function gisLogin() {
     callback: async r => {
       dlog('gis cb ' + (r && (r.error || (r.access_token ? 'token' : 'empty'))));
       if (!r || r.error || !r.access_token) { if (r && (r.error === 'access_denied' || r.error === 'popup_closed')) { if (need) gate('login', ''); return; } return fail(r || {}); }
-      try { if (need) gate('loading', 'ログインしています…'); const cr = sdk.GoogleAuthProvider.credential(null, r.access_token); let u = null, err = null;
-        for (let k = 0; k < 5 && !u; k++) {
-          if (document.visibilityState !== 'visible') await new Promise(rs => { const f = () => { if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', f); rs(); } }; document.addEventListener('visibilitychange', f); setTimeout(rs, 4000); });
-          await new Promise(rs => setTimeout(rs, k ? 700 * k : 400));
-          try { u = await sdk.signInWithCredential(auth, cr); } catch (e) { err = e; dlog('try' + (k + 1) + ' ' + (e && e.code)); if (!(e && e.code === 'auth/network-request-failed')) throw e; }
-        }
-        if (!u) throw err; dlog('credential ok'); if (u && u.user && !cloud.user) onUser(u.user); }
-      catch (e) { fail(e); }
+      try { localStorage.setItem(PK, JSON.stringify({ t: r.access_token, ts: Date.now() })); } catch (e) { }
+      credLogin(r.access_token);
     },
     error_callback: e => { dlog('gis err ' + (e && e.type)); if (e && (e.type === 'popup_closed' || e.type === 'popup_failed_to_open')) { if (need) gate('login', e.type === 'popup_failed_to_open' ? 'ポップアップを開けませんでした。もう一度タップしてください。' : ''); return; } fail({ message: e && e.type }); }
   });
