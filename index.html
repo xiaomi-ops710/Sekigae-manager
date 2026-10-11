@@ -1,8 +1,8 @@
 <!doctype html><html lang="ja" class="pages"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="席替え"><meta name="apple-mobile-web-app-status-bar-style" content="default">
-<script src="firebase-config.js"></script><script>try{var f=window.SEKIGAE_FIREBASE;if(f&&f.config&&f.config.apiKey&&f.requireLogin!==false)document.documentElement.classList.add("gated")}catch(e){}</script>
+<script src="firebase-config.js"></script><script>try{var f=window.SEKIGAE_FIREBASE;if(f&&f.config&&f.config.apiKey&&f.requireLogin!==false&&localStorage.getItem("sekigae.guest")!=="1")document.documentElement.classList.add("gated")}catch(e){}</script>
 <title>席替えスタジオ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Klee+One:wght@400;600&family=Roboto:wght@400;500;700&display=swap">
 <style>
 /* Layout: M3 navigation rail (wide) / bottom navigation bar (phone) + top app bar + content canvas */
 :root{
@@ -937,7 +937,7 @@ function renderRules() {
   <div class="h-row"><h2>条件</h2><span class="sub">必須の条件は必ず守り、「できれば」の条件はなるべく多く満たすよう最適化します。</span></div>
   <div class="row" style="margin-bottom:16px">
     <button class="btn filled" id="btnAddRule"><span class="ms">add</span>条件を追加</button>
-    <button class="btn tonal" id="btnAI"><span class="ms">auto_awesome</span>文章で条件を追加</button>
+    <button class="btn tonal" id="btnAI"><span class="ms">auto_awesome</span>文章で条件を追加</button>${gKey() ? '<button class="btn text" id="btnAIChk"><span class="ms">fact_check</span>AIで条件をチェック</button>' : ''}
   </div>
   <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
     <div class="stack" id="ruleList"></div>
@@ -973,7 +973,7 @@ function renderRules() {
     <div class="row" style="gap:0;flex-wrap:nowrap"><button class="icon-btn" data-redit="${r.id}" title="編集"><span class="ms">edit</span></button><button class="icon-btn" data-rdup="${r.id}" title="複製"><span class="ms">content_copy</span></button><button class="icon-btn" data-rdel="${r.id}" title="削除"><span class="ms">delete</span></button></div></div>`;
   }).join('') : `<div class="card empty-state"><span class="ms">rule</span><div style="margin-top:8px">条件はまだありません。<br>「条件を追加」から作成できます。</div></div>`;
   $('#btnAddRule').onclick = () => ruleDialog(null);
-  $('#btnAI').onclick = aiDialog;
+  $('#btnAI').onclick = aiDialog; if ($('#btnAIChk')) $('#btnAIChk').onclick = aiCheckDialog;
   $$('[data-on]').forEach(i => i.onchange = () => { S.rules.find(r => r.id === i.dataset.on).on = i.checked; save(); renderRules(); });
   $$('[data-redit]').forEach(b => b.onclick = () => ruleDialog(S.rules.find(r => r.id === b.dataset.redit)));
   $$('[data-rdup]').forEach(b => b.onclick = () => { const r = S.rules.find(x => x.id === b.dataset.rdup); S.rules.push({ ...JSON.parse(JSON.stringify(r)), id: uid() }); save(); renderRules(); });
@@ -1242,33 +1242,64 @@ function officerDraw() {
 /* ----- image / print ----- */
 const G_HEX = ['#e3e9ea', '#ffd9de', '#ffdcc2', '#f5e29a', '#c4ecb4', '#b1ecdc', '#bde2ff', '#dcd2ff', '#f6d0ee'];
 let picOpt = { title: '席替え結果', date: true, nums: true, tags: false, star: true, no: true, cw: 112, orient: 'landscape' };
-function rr(x, a, b, w, h, r, f) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, w, h, r); else x.rect(a, b, w, h); x.fillStyle = f; x.fill(); }
+function rr(x, a, b, w, h, r, f, bc, bw, dash) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, w, h, r); else x.rect(a, b, w, h); if (f) { x.fillStyle = f; x.fill(); } if (bc && bw) { x.strokeStyle = bc; x.lineWidth = bw; x.setLineDash(dash ? [6, 4] : []); x.stroke(); x.setLineDash([]); } }
+const FONTS = {
+  gothic: '"Noto Sans JP","Hiragino Sans","Yu Gothic",Meiryo,sans-serif',
+  mincho: '"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif',
+  rounded: '"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif',
+  hand: '"Klee One","Hiragino Kaku Gothic ProN","Hiragino Sans",cursive'
+};
+const STYLE_DEF = { font: 'gothic', bold: true, bg: '#ffffff', titleAlign: 'left', titleColor: '#171d1e', titleSize: 26, cellFill: null, cellBorder: null, cellBorderW: 0, dashed: false, radius: 12, textColor: '#171d1e', gap: 8, cellRatio: 0, vertical: false, seatNums: true, teacherLabel: '教卓・黒板', teacherPos: '', teacherFill: '#d3e4ff', teacherText: '#041c35', titleLine: false, nameScale: 1 };
+const hexOk = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);
+function cleanStyle(j) {
+  if (!j || typeof j !== 'object') return null; const o = {}, n = (v, a, b) => (typeof v === 'number' && isFinite(v) ? Math.min(b, Math.max(a, v)) : undefined);
+  if (FONTS[j.font]) o.font = j.font; if (typeof j.bold === 'boolean') o.bold = j.bold;
+  ['bg', 'titleColor', 'cellFill', 'cellBorder', 'textColor', 'teacherFill', 'teacherText'].forEach(k => { if (hexOk(j[k])) o[k] = j[k]; });
+  if (j.titleAlign === 'center' || j.titleAlign === 'left') o.titleAlign = j.titleAlign;
+  [['titleSize', 16, 44], ['cellBorderW', 0, 5], ['radius', 0, 40], ['gap', 0, 28], ['cellRatio', 0.45, 2.2], ['nameScale', .7, 1.4]].forEach(([k, a, b]) => { const v = n(j[k], a, b); if (v !== undefined) o[k] = v; });
+  ['dashed', 'vertical', 'seatNums', 'titleLine'].forEach(k => { if (typeof j[k] === 'boolean') o[k] = j[k]; });
+  if (typeof j.teacherLabel === 'string') o.teacherLabel = j.teacherLabel.slice(0, 12);
+  if (['top', 'bottom', 'none'].includes(j.teacherPos)) o.teacherPos = j.teacherPos;
+  return o;
+}
 function buildCanvas(o) {
+  const st = { ...STYLE_DEF, ...(o.style || {}) };
   const L = S.layout, res = S.result, cols = L.cols, rows = L.rows, nums = seatNumbers(), order = viewOrder();
-  const cw = o.cw, ch = (o.tags || o.no) ? 70 : 60, gap = 8, pad = 28, head = 62, tb = L.teacher ? 44 : 0, tg = L.teacher ? 14 : 0;
+  const cw = o.cw, vert = st.vertical; let ch = st.cellRatio ? Math.round(cw * st.cellRatio) : ((o.tags || o.no) ? 70 : 60); if (vert) ch = Math.max(ch, Math.round(cw * 1.5));
+  const gap = st.gap, pad = 28, head = 62, tPos = L.teacher && st.teacherPos !== 'none' ? (st.teacherPos || (S.view === 'teacher' ? 'top' : 'bottom')) : '', tb = tPos ? 44 : 0, tg = tPos ? 14 : 0;
   const W = pad * 2 + cols * cw + (cols - 1) * gap, H = pad * 2 + head + rows * ch + (rows - 1) * gap + tb + tg;
   const sc = o.scale || 2, cv = document.createElement('canvas'); cv.width = W * sc; cv.height = H * sc;
   const x = cv.getContext('2d'); x.scale(sc, sc);
-  const FF = '"Noto Sans JP","Hiragino Sans","Yu Gothic",Meiryo,sans-serif';
-  x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic';
-  x.fillStyle = '#171d1e'; x.font = `700 26px ${FF}`; x.fillText(o.title || '', pad, pad + 26);
-  if (o.date) { x.font = `400 14px ${FF}`; x.fillStyle = '#6f797a'; x.textAlign = 'right'; x.fillText(new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }), W - pad, pad + 26); x.textAlign = 'left'; }
+  const FF = FONTS[st.font] || FONTS.gothic, BW = st.bold ? 700 : 500;
+  x.fillStyle = st.bg; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic';
+  x.fillStyle = st.titleColor; x.font = `${BW} ${st.titleSize}px ${FF}`;
+  const ctr = st.titleAlign === 'center'; x.textAlign = ctr ? 'center' : 'left'; x.fillText(o.title || '', ctr ? W / 2 : pad, pad + st.titleSize);
+  if (o.date) { x.font = `400 14px ${FF}`; x.fillStyle = '#6f797a'; x.textAlign = 'right'; x.fillText(new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }), W - pad, ctr ? pad + st.titleSize + 22 : pad + st.titleSize); }
+  x.textAlign = 'left';
+  if (st.titleLine) { x.strokeStyle = st.titleColor; x.lineWidth = 2; x.beginPath(); x.moveTo(pad, pad + st.titleSize + 12); x.lineTo(W - pad, pad + st.titleSize + 12); x.stroke(); }
   let y = pad + head;
-  const teacher = yy => { rr(x, pad + (W - pad * 2) * .2, yy, (W - pad * 2) * .6, tb, 12, '#d3e4ff'); x.fillStyle = '#041c35'; x.font = `500 16px ${FF}`; x.textAlign = 'center'; x.fillText('教卓・黒板', W / 2, yy + tb / 2 + 6); x.textAlign = 'left'; };
-  if (L.teacher && S.view === 'teacher') { teacher(y); y += tb + tg; }
+  const teacher = yy => { rr(x, pad + (W - pad * 2) * .2, yy, (W - pad * 2) * .6, tb, Math.min(st.radius, 22), st.teacherFill); x.fillStyle = st.teacherText; x.font = `500 16px ${FF}`; x.textAlign = 'center'; x.fillText(st.teacherLabel, W / 2, yy + tb / 2 + 6); x.textAlign = 'left'; };
+  if (tPos === 'top') { teacher(y); y += tb + tg; }
   order.forEach((idx, k) => {
     const c = L.cells[idx]; if (!c.s) return; const r = Math.floor(k / cols), cc = k % cols, px = pad + cc * (cw + gap), py = y + r * (ch + gap);
-    rr(x, px, py, cw, ch, 12, G_HEX[c.g] || G_HEX[0]);
+    rr(x, px, py, cw, ch, st.radius, st.cellFill || G_HEX[c.g] || G_HEX[0], st.cellBorder, st.cellBorderW, st.dashed);
     const id = res && res.assign[idx], m = id ? memberById(id) : null;
-    if (o.nums) { x.fillStyle = '#6f797a'; x.font = `400 10px ${FF}`; x.fillText(String(nums[idx]), px + 7, py + 14); }
-    const line2 = m ? [o.no && m.no != null && m.no !== '' ? m.no + '番' : '', o.tags ? m.tags.filter(t => t !== '学級委員').slice(0, 2).join(' / ') : ''].filter(Boolean).join('  ') : '';
-    const nm = m ? m.name : '空席'; let fs = 22; x.font = `700 ${fs}px ${FF}`; while (x.measureText(nm).width > cw - 16 && fs > 9) { fs--; x.font = `700 ${fs}px ${FF}`; }
-    x.fillStyle = m ? '#171d1e' : '#9aa3a5'; x.textAlign = 'center'; x.fillText(nm, px + cw / 2, py + (line2 ? ch / 2 : ch / 2 + 8));
-    if (line2) { x.font = `400 11px ${FF}`; x.fillStyle = '#3f484a'; x.fillText(line2, px + cw / 2, py + ch - 12); }
+    if (o.nums && st.seatNums) { x.fillStyle = '#6f797a'; x.font = `400 10px ${FF}`; x.fillText(String(nums[idx]), px + 7, py + 14); }
+    const noS = m && o.no && m.no != null && m.no !== '' ? m.no + '番' : '', tgS = m && o.tags ? m.tags.filter(t => t !== '学級委員').slice(0, 2).join(' / ') : '';
+    const nm = m ? m.name : '空席'; x.fillStyle = m ? st.textColor : '#9aa3a5'; x.textAlign = 'center';
+    if (vert) {
+      const chars = [...nm], avail = ch - 24 - (noS ? 16 : 0); let fs = Math.min(Math.round(22 * st.nameScale), Math.floor(avail / Math.max(1, chars.length)), cw - 12); fs = Math.max(fs, 9); x.font = `${BW} ${fs}px ${FF}`;
+      const top = py + 20 + (avail - fs * chars.length) / 2; chars.forEach((chr, i) => x.fillText(chr, px + cw / 2, top + fs * (i + .85)));
+      if (noS) { x.font = `400 11px ${FF}`; x.fillStyle = '#3f484a'; x.fillText(noS, px + cw / 2, py + ch - 8); }
+    } else {
+      const line2 = [noS, tgS].filter(Boolean).join('  '); let fs = Math.round(22 * st.nameScale); x.font = `${BW} ${fs}px ${FF}`; while (x.measureText(nm).width > cw - 16 && fs > 9) { fs--; x.font = `${BW} ${fs}px ${FF}`; }
+      x.fillText(nm, px + cw / 2, py + (line2 ? ch / 2 : ch / 2 + 8));
+      if (line2) { x.font = `400 11px ${FF}`; x.fillStyle = '#3f484a'; x.fillText(line2, px + cw / 2, py + ch - 12); }
+    }
     x.textAlign = 'left';
     if (o.star && m && m.tags.includes('学級委員')) { x.font = `400 16px ${FF}`; x.fillStyle = '#e0a100'; x.textAlign = 'right'; x.fillText('★', px + cw - 6, py + 17); x.textAlign = 'left'; }
   });
-  if (L.teacher && S.view === 'student') teacher(y + rows * ch + (rows - 1) * gap + tg);
+  if (tPos === 'bottom') teacher(y + rows * ch + (rows - 1) * gap + tg);
   return cv;
 }
 function pictureDialog() {
@@ -1280,24 +1311,45 @@ function pictureDialog() {
     <div class="row"><label class="field grow" style="min-width:200px"><span>タイトル</span><input id="pvTitle" value="${esc(o.title)}"></label>
     <div class="seg" id="pvSize"><button data-v="112" class="${o.cw === 112 ? 'on' : ''}">標準</button><button data-v="150" class="${o.cw === 150 ? 'on' : ''}">大きめ</button></div>
     <div class="seg" id="pvOr"><button data-v="landscape" class="${o.orient === 'landscape' ? 'on' : ''}">A4 横</button><button data-v="portrait" class="${o.orient === 'portrait' ? 'on' : ''}">A4 縦</button></div></div>
+    <div class="row"><label class="btn tonal sm" style="cursor:pointer"><span class="ms">add_photo_alternate</span>手持ちの座席表の写真からデザインを真似る<input type="file" id="pvRef" accept="image/*" hidden></label><button class="btn text sm" id="pvRefClr" ${o.style ? '' : 'hidden'}><span class="ms">restart_alt</span>標準デザインに戻す</button><span class="sub" id="pvRefSt">${o.style ? '参考デザインを適用中' : ''}</span></div>
+    <div><div class="lbl">書体</div><div class="seg" id="pvFont">${[['gothic', 'ゴシック'], ['mincho', '明朝'], ['rounded', '丸ゴシック'], ['hand', '手書き風']].map(([v, l]) => `<button data-v="${v}" class="${styleFont(o.style) === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="row">${[['date', '日付'], ['nums', '席番号'], ['no', '出席番号'], ['tags', 'タグ'], ['star', '学級委員マーク']].map(([k, l]) => `<label class="chip ${o[k] ? 'sel' : ''}" style="cursor:pointer"><input type="checkbox" data-pk="${k}" ${o[k] ? 'checked' : ''} hidden>${l}</label>`).join('')}</div>`,
-    actions: [{ label: '閉じる' }, { label: 'クリップボードにコピー', icon: 'content_copy', kind: 'outlined', onClick: () => { copyImage(); return false; } }, { label: '印刷', icon: 'print', kind: 'tonal', onClick: () => { doPrint(); return false; } }, { label: 'PNGを保存', icon: 'download', kind: 'filled', onClick: () => { saveImage(); return false; } }]
+    actions: [{ label: '閉じる' }, { label: '共有', icon: 'ios_share', kind: 'outlined', onClick: () => { shareImage(); return false; } }, { label: 'クリップボードにコピー', icon: 'content_copy', kind: 'outlined', onClick: () => { copyImage(); return false; } }, { label: '印刷', icon: 'print', kind: 'tonal', onClick: () => { doPrint(); return false; } }, { label: 'PNGを保存', icon: 'download', kind: 'filled', onClick: () => { saveImage(); return false; } }]
   });
-  const draw = () => { const cv = buildCanvas({ ...o, scale: 1.5 }); cv.className = 'pv'; cv.style.width = cv.width / 1.5 + 'px'; $('#pvHost', d.el).replaceChildren(cv); };
+  const draw = async () => { await ensureFont(styleFont(o.style)); const cv = buildCanvas({ ...o, scale: 1.5 }); cv.className = 'pv'; cv.style.width = cv.width / 1.5 + 'px'; $('#pvHost', d.el).replaceChildren(cv); };
   $('#pvTitle', d.el).oninput = e => { o.title = e.target.value; draw(); };
   $('#pvSize', d.el).onclick = e => { const b = e.target.closest('button'); if (!b) return; o.cw = +b.dataset.v; $$('#pvSize button', d.el).forEach(x => x.classList.toggle('on', x === b)); draw(); };
   $('#pvOr', d.el).onclick = e => { const b = e.target.closest('button'); if (!b) return; o.orient = b.dataset.v; $$('#pvOr button', d.el).forEach(x => x.classList.toggle('on', x === b)); };
   $$('[data-pk]', d.el).forEach(i => i.onchange = () => { o[i.dataset.pk] = i.checked; i.parentElement.classList.toggle('sel', i.checked); draw(); });
+  $('#pvFont', d.el).onclick = e => { const b = e.target.closest('button'); if (!b) return; o.style = { ...(o.style || {}), font: b.dataset.v }; savePicStyle(o.style); $$('#pvFont button', d.el).forEach(x => x.classList.toggle('on', x === b)); $('#pvRefClr', d.el).hidden = false; draw(); };
+  $('#pvRef', d.el).onchange = async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; if (needKey(() => pictureDialog())) { d.close(); return; }
+    const st = $('#pvRefSt', d.el); st.innerHTML = '<span class="ms sm" style="vertical-align:-4px">auto_awesome</span> デザインを解析中…';
+    try { const r = await analyzeStyle(f); o.style = r.st; savePicStyle(o.style); st.textContent = '参考デザインを適用しました'; $('#pvRefClr', d.el).hidden = false; $$('#pvFont button', d.el).forEach(x => x.classList.toggle('on', x.dataset.v === styleFont(o.style))); await draw(); }
+    catch (er) { st.textContent = ''; snack(er && er.message === 'img' ? '画像を開けませんでした' : er && er.message === 'style' ? 'デザインを読み取れませんでした。座席表全体が写った写真でお試しください' : gErr(er), 5000); }
+  };
+  $('#pvRefClr', d.el).onclick = () => { o.style = null; savePicStyle(null); $('#pvRefClr', d.el).hidden = true; $('#pvRefSt', d.el).textContent = ''; $$('#pvFont button', d.el).forEach(x => x.classList.toggle('on', x.dataset.v === 'gothic')); draw(); };
   draw();
 }
 const canvasBlob = (o, sc) => new Promise(res => buildCanvas({ ...o, scale: sc }).toBlob(res, 'image/png'));
-async function saveImage() { const b = await canvasBlob(picOpt, 2); if (!b) { snack('画像を作成できませんでした'); return; } const fn = `席替え_${new Date().toISOString().slice(0, 10)}.png`; await saveFile(fn, b); }
+async function saveImage() { await ensureFont(styleFont(picOpt.style)); const b = await canvasBlob(picOpt, 2); if (!b) { snack('画像を作成できませんでした'); return; } const fn = `席替え_${new Date().toISOString().slice(0, 10)}.png`; await saveFile(fn, b); }
 async function copyImage() { try { const b = await canvasBlob(picOpt, 2); await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); snack('画像をコピーしました'); } catch (e) { snack('この環境では画像をコピーできません。「PNGを保存」をお使いください', 4500); } }
 function doPrint() {
   if (window.claude) { snack('印刷はGitHub Pagesなどの公開版で使えます。ここでは「PNGを保存」をお使いください', 5000); return; }
-  const cv = buildCanvas({ ...picOpt, scale: 3 }); $('#printSheet').innerHTML = `<img src="${cv.toDataURL('image/png')}" alt="座席表">`;
+  const sa = navigator.standalone || matchMedia('(display-mode: standalone)').matches, ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (sa && ios) { snack('共有メニューが開いたら「プリント」を選んでください', 5000); shareImage(); return; }
+  const cv = buildCanvas({ ...picOpt, scale: 2.5 }); const img = new Image(); img.alt = '座席表'; img.src = cv.toDataURL('image/png');
+  $('#printSheet').replaceChildren(img);
   let st = $('#pageStyle'); if (!st) { st = document.createElement('style'); st.id = 'pageStyle'; document.head.appendChild(st); } st.textContent = `@page{size:A4 ${picOpt.orient};margin:8mm}`;
-  setTimeout(() => { try { window.print(); } catch (e) { snack('印刷を開始できませんでした'); } }, 150);
+  // iOSはユーザー操作の直後（同期）でないとwindow.print()が無視される。ダイアログを閉じてから即座に呼ぶ
+  $$('.scrim').forEach(x => x.classList.add('printing'));
+  try { window.print(); } catch (e) { snack('印刷を開始できませんでした。「共有」から印刷してください', 5000); }
+}
+function shareImage() {
+  const du = buildCanvas({ ...picOpt, scale: 2 }).toDataURL('image/png'), bin = atob(du.split(',')[1]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const f = new File([u8], `席替え_${new Date().toISOString().slice(0, 10)}.png`, { type: 'image/png' });
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: '座席表' }).catch(() => { }); return; } } catch (e) { }
+  snack('共有に対応していません。「PNGを保存」をお使いください', 4500);
 }
 async function saveFile(filename, data) {
   const isBlob = typeof Blob !== 'undefined' && data instanceof Blob;
@@ -1347,7 +1399,7 @@ function renderMembers() {
   const list = S.members.filter(m => !q || m.name.includes(q) || String(noOf(m)).includes(q) || m.tags.some(t => t.includes(q)));
   el.innerHTML = `
   <div class="h-row"><h2>名前</h2><span class="sub">出席 <b class="kbd">${pres}</b> ／ 欠席 <b class="kbd">${S.members.length - pres}</b> ／ 全 <b class="kbd">${S.members.length}</b>名</span><span class="grow"></span>
-    <button class="btn tonal" id="btnBulk"><span class="ms">playlist_add</span>まとめて追加</button><button class="btn outlined" id="btnMore"><span class="ms">tune</span>一括操作</button></div>
+    <button class="btn tonal" id="btnBulk"><span class="ms">playlist_add</span>まとめて追加</button><button class="btn tonal" id="btnRoster"><span class="ms">photo_camera</span>写真から読み取り</button><button class="btn outlined" id="btnMore"><span class="ms">tune</span>一括操作</button></div>
   <div class="mem-layout"><div class="stack" style="min-width:0">
     <form id="addForm" class="addbar"><label class="field nof"><span>出席番号</span><input id="addNo" inputmode="numeric" value="${nextNo()}"></label><label class="field grow"><span>名前（入力して Enter で追加）</span><input id="addName" autocomplete="off" enterkeyhint="done" placeholder="例: 山本"></label><button class="btn filled big" type="submit"><span class="ms">add</span>追加</button></form>
     <div class="card" style="padding:12px"><label class="field" style="margin:6px 0 10px"><span>絞り込み（名前・番号・タグ）</span><input id="memFilter" value="${esc(memberFilter)}"></label>
@@ -1364,7 +1416,7 @@ function renderMembers() {
     S.members.push({ id: uid(), name: n, tags: [], absent: false, no: /^\d+$/.test(no) ? +no : null }); save(); renderMembers(); $('#addName').focus();
   };
   $('#memFilter').oninput = e => { memberFilter = e.target.value; const pos = e.target.selectionStart; renderMembers(); const f = $('#memFilter'); f.focus(); f.setSelectionRange(pos, pos); };
-  $('#btnBulk').onclick = bulkDialog; $('#btnMore').onclick = moreDialog; renderOfficerCard();
+  $('#btnBulk').onclick = bulkDialog; $('#btnRoster').onclick = rosterPhotoDialog; $('#btnMore').onclick = moreDialog; renderOfficerCard();
   $$('[data-abs]').forEach(b => b.onclick = () => { const m = memberById(b.dataset.abs); m.absent = !m.absent; save(); renderMembers(); });
   $$('[data-edit]').forEach(b => b.onclick = () => editMember(b.dataset.edit));
   $$('[data-del]').forEach(b => b.onclick = () => { const id = b.dataset.del; S.members = S.members.filter(m => m.id !== id); S.rules.forEach(r => ['A', 'B'].forEach(k => r[k] && (r[k].p = r[k].p.filter(x => x !== id)))); save(); renderMembers(); });
@@ -1530,15 +1582,68 @@ function ruleDialog(rule, isTemplate) {
 }
 
 /* ===== AI rule input ===== */
+
+/* ----- Gemini (device-local key) ----- */
+const GK = 'sekigae.gemini.key', GM = 'sekigae.gemini.model';
+const gKey = () => { try { return localStorage.getItem(GK) || ''; } catch (e) { return ''; } };
+const gModel = () => { try { return localStorage.getItem(GM) || 'gemini-2.5-flash'; } catch (e) { return 'gemini-2.5-flash'; } };
+async function geminiJson(prompt, { timeout = 30000, image = null } = {}) {
+  const key = gKey(); if (!key) throw Object.assign(new Error('no key'), { code: 'nokey' });
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), timeout);
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(gModel())}:generateContent`, {
+      method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : []), { text: prompt }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
+    });
+    if (!r.ok) { let m = ''; try { m = (await r.json()).error.message; } catch (e) { } throw Object.assign(new Error(m || 'http ' + r.status), { code: r.status === 400 || r.status === 403 ? 'badkey' : r.status === 429 ? 'rate' : 'http', status: r.status }); }
+    const j = await r.json(); const tx = ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');
+    if (!tx) throw Object.assign(new Error('empty'), { code: 'empty' });
+    return JSON.parse(tx.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+  } catch (e) { if (e.name === 'AbortError') throw Object.assign(new Error('timeout'), { code: 'timeout' }); if (e instanceof SyntaxError) throw Object.assign(e, { code: 'parse' }); if (!e.code) e.code = 'net'; throw e; }
+  finally { clearTimeout(t); }
+}
+const gErr = e => ({ nokey: 'APIキーが未設定です', badkey: 'APIキーが正しくないか、権限がありません', rate: '利用上限に達しました。少し待ってください', timeout: '応答に時間がかかりすぎました', net: '通信できませんでした', parse: 'AIの返答を解釈できませんでした', empty: 'AIから返答がありませんでした' }[e && e.code] || 'AIの呼び出しに失敗しました');
+function geminiDialog(after) {
+  const d = dialog({
+    title: 'Gemini AI の設定', icon: 'auto_awesome',
+    body: `<div class="sub">Google AI Studio（aistudio.google.com/apikey）で発行したAPIキーを入れると、文章での条件入力などでGeminiを使います。キーは<b>この端末のブラウザにだけ</b>保存され、クラウド同期やバックアップには含まれません。</div>
+    <label class="field"><span>APIキー</span><input id="gkKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(gKey())}" placeholder="AIza..."></label>
+    <div><div class="lbl">モデル</div><div class="seg" id="gkSeg">${[['gemini-2.5-flash', '標準（速い）'], ['gemini-2.5-flash-lite', '軽量'], ['gemini-2.5-pro', '高精度']].map(([v, l]) => `<button data-m="${v}" class="${gModel() === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="row"><button class="btn tonal" id="gkTest"><span class="ms">network_check</span>接続テスト</button><span class="sub" id="gkSt"></span></div>`,
+    actions: [{ label: 'キーを削除', onClick: () => { try { localStorage.removeItem(GK); } catch (e) { } snack('APIキーを削除しました'); after && after(); } }, { label: '保存', kind: 'filled', onClick: () => { const v = $('#gkKey', d.el).value.trim(); try { v ? localStorage.setItem(GK, v) : localStorage.removeItem(GK); } catch (e) { } snack(v ? 'Geminiを有効にしました' : 'APIキーを削除しました'); after && after(); } }]
+  });
+  let model = gModel();
+  $$('#gkSeg button', d.el).forEach(b => b.onclick = () => { model = b.dataset.m; try { localStorage.setItem(GM, model); } catch (e) { } $$('#gkSeg button', d.el).forEach(x => x.classList.toggle('on', x === b)); });
+  $('#gkTest', d.el).onclick = async () => {
+    const v = $('#gkKey', d.el).value.trim(), st = $('#gkSt', d.el); if (!v) { st.textContent = 'キーを入力してください'; return; }
+    try { localStorage.setItem(GK, v); } catch (e) { } st.textContent = 'テスト中…'; st.style.color = '';
+    try { const r = await geminiJson('次のJSONだけを返してください: {"ok":true}', { timeout: 15000 }); st.textContent = r && r.ok ? '✓ 接続できました' : '返答が想定外でした'; st.style.color = r && r.ok ? 'var(--ok)' : ''; }
+    catch (e) { st.textContent = gErr(e) + (e.message && e.code === 'badkey' ? '：' + e.message.slice(0, 60) : ''); st.style.color = 'var(--error)'; }
+  };
+}
+async function aiCheckDialog() {
+  const rules = S.rules.map(r => ruleSentence(r, true) + (r.hard ? '【必須】' : '【できれば】'));
+  const d = dialog({ title: 'AIで条件をチェック', icon: 'fact_check', body: `<div id="ckOut" class="sub">Geminiが条件の矛盾や無理な組み合わせを調べています…</div>`, actions: [{ label: '閉じる' }] });
+  if (!rules.length) { $('#ckOut', d.el).textContent = '条件がまだありません。'; return; }
+  const prompt = `席替えアプリの条件リストを検査してください。座席は${S.layout.rows}行×${S.layout.cols}列、席数${seatCount()}、メンバー${S.members.length}名。必須条件どうしの矛盾、実現がほぼ不可能な組み合わせ、重複、言い回しがあいまいな条件を探し、日本語で簡潔に指摘します。
+JSONのみ: {"ok":true|false,"issues":[{"rules":[条件番号(1始まり)],"text":"指摘と改善案"}],"summary":"一言"}
+条件:
+${rules.map((x, i) => `${i + 1}. ${x}`).join('\n')}`;
+  try {
+    const r = await geminiJson(prompt); const is = (r && r.issues) || [];
+    $('#ckOut', d.el).innerHTML = `<div class="banner ${is.length ? 'warn' : ''}"><span class="ms">${is.length ? 'info' : 'check_circle'}</span><div>${esc(r.summary || (is.length ? '気になる点があります' : '問題は見つかりませんでした'))}</div></div>` + is.map(x => `<div class="rule"><div class="txt"><div class="sub">条件 ${esc((x.rules || []).join(', '))}</div><div>${esc(x.text || '')}</div></div></div>`).join('');
+  } catch (e) { $('#ckOut', d.el).innerHTML = `<div class="banner"><span class="ms">error</span><div>${esc(gErr(e))}</div></div>`; }
+}
 function aiDialog() {
   const nums = seatNumbers();
   const d = dialog({
-    title: caps.sample ? '文章でAIに条件を追加' : '文章で条件を追加', icon: 'auto_awesome', wide: true,
-    body: `<div class="sub">${caps.sample ? '日本語で条件を書くと、AIが条件に変換します。' : '日本語で条件を書くと、条件に変換します（簡易解析）。「〇〇は□□の隣」「□□の後ろに〇〇」「Aと Bは3マス離す」のような書き方を認識します。'}複数の条件は改行で区切ってください。追加前に内容を確認できます。</div>
+    title: gKey() || caps.sample ? '文章でAIに条件を追加' : '文章で条件を追加', icon: 'auto_awesome', wide: true,
+    body: `<div class="sub">${gKey() ? `<span class="badge">Gemini</span> ` : ''}${gKey() || caps.sample ? '日本語で条件を書くと、AIが条件に変換します。' : '日本語で条件を書くと、条件に変換します（簡易解析）。「〇〇は□□の隣」「□□の後ろに〇〇」「Aと Bは3マス離す」のような書き方を認識します。'}複数の条件は改行で区切ってください。追加前に内容を確認できます。</div>
     <label class="field"><span>条件の文章</span><textarea id="aiTa" rows="5" placeholder="例:\n・田中は佐藤の隣にしたい\n・木村と小林は3マス以上離す\n・視力の人は前の2列\n・男子同士は隣にしない（できれば）"></textarea></label>
-    <div class="row"><button class="btn filled" id="aiGo"><span class="ms">auto_awesome</span>条件に変換</button><span class="sub" id="aiSt"></span></div><div id="aiOut" class="stack"></div>`,
+    <div class="row"><button class="btn filled" id="aiGo"><span class="ms">auto_awesome</span>条件に変換</button><button class="btn text sm" id="aiCfg"><span class="ms">key</span>Gemini設定</button><span class="sub" id="aiSt"></span></div><div id="aiOut" class="stack"></div>`,
     actions: [{ label: '閉じる' }]
   });
+  $('#aiCfg', d.el).onclick = () => { d.close(); geminiDialog(aiDialog); };
   $('#aiGo', d.el).onclick = async () => {
     const text = $('#aiTa', d.el).value.trim(); if (!text) return;
     const st = $('#aiSt', d.el), out = $('#aiOut', d.el); st.textContent = '解析中…'; out.innerHTML = '';
@@ -1558,14 +1663,18 @@ function aiDialog() {
  "hard":true|false, // 「できれば」「なるべく」はfalse、それ以外true
  "w":1〜10 // hard=falseのときの優先度}
 nameやtagは上のリストにあるものだけを使う。該当が無い場合は無視する。
+既存の条件（重複して出力しない）:
+${S.rules.map(r => ruleSentence(r, true)).join('\n') || 'なし'}
 文章:
 ${text}`;
     try {
-      const arr = caps.sample ? await caps.sample.json(prompt) : parseLocal(text);
+      let arr;
+      if (gKey()) { try { arr = await geminiJson(prompt); st.textContent = 'Geminiで解析しました'; } catch (e) { arr = parseLocal(text); arr.warn = [...(arr.warn || []), `（${gErr(e)}のため簡易解析に切り替えました）`]; } }
+      else arr = caps.sample ? await caps.sample.json(prompt) : parseLocal(text);
       const list = (Array.isArray(arr) ? arr : arr && arr.rules ? arr.rules : []).map(aiToRule).filter(Boolean);
       const warnHtml = arr && arr.warn && arr.warn.length ? `<div class="banner warn"><span class="ms">info</span><div>解釈できなかった文：${arr.warn.map(x => esc(x)).join(' ／ ')}<br>メンバー名やタグを入れて、言い方を変えてみてください。</div></div>` : '';
       if (!list.length) { st.textContent = ''; out.innerHTML = warnHtml || '<div class="banner warn"><span class="ms">info</span><div>条件に変換できませんでした。メンバー名やタグを含めて書き直してください。</div></div>'; return; }
-      st.textContent = `${list.length}件の候補`;
+      st.textContent = (gKey() ? 'Gemini：' : '') + `${list.length}件の候補`;
       out.innerHTML = warnHtml + list.map((r, i) => `<label class="rule" style="cursor:pointer"><input type="checkbox" checked data-ai="${i}" style="width:20px;height:20px;accent-color:var(--primary)"><div class="txt"><div>${r.hard ? '<span class="badge">必須</span>' : `<span class="badge soft">できれば ★${r.w}</span>`}</div><div>${ruleSentence(r)}</div>${r._warn ? `<div class="sub" style="color:var(--error)">未登録の名前/タグ: ${esc(r._warn)}</div>` : ''}</div></label>`).join('') + `<div><button class="btn filled" id="aiAdd"><span class="ms">add</span>選んだ条件を追加</button></div>`;
       $('#aiAdd', d.el).onclick = () => { const picks = $$('[data-ai]', d.el).filter(c => c.checked).map(c => list[+c.dataset.ai]); picks.forEach(r => { delete r._warn; S.rules.push(r); }); save(); renderRules(); d.close(); snack(`${picks.length}件の条件を追加しました`); };
     } catch (e) { st.textContent = ''; out.innerHTML = `<div class="banner"><span class="ms">error</span><div>${e && e.code === 'not_granted' ? 'AIの利用が許可されていません。' : e && e.code === 'rate_limited' ? '少し待ってからもう一度お試しください。' : 'AIによる変換に失敗しました。通常の「条件を追加」をお使いください。'}</div></div>`; }
@@ -1621,6 +1730,7 @@ function renderData() {
   <div class="h-row"><h2>履歴・出力</h2><span class="sub">履歴 ${S.history.length}件（このブラウザに保存）</span></div>
   <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
     <div class="stack">
+      <div class="card stack"><h3><span class="ms">auto_awesome</span>Gemini AI</h3><div class="sub">${gKey() ? '設定済み（' + esc(gModel()) + '）。文章での条件入力と条件チェックで使われます。' : 'APIキーを入れると、文章での条件入力の精度が上がります。'}</div><div class="row"><button class="btn tonal" id="gkOpen"><span class="ms">key</span>APIキーを設定</button></div></div>
       <div class="card stack"><h3><span class="ms">ios_share</span>結果の書き出し</h3>
         ${S.result ? `<div class="seg" id="exSeg"><button data-k="grid" class="${exportKind === 'grid' ? 'on' : ''}">配置表（Excel貼付）</button><button data-k="csv" class="${exportKind === 'csv' ? 'on' : ''}">座席一覧CSV</button></div>
         <pre class="out" id="exPre">${esc(exportText())}</pre>
@@ -1687,7 +1797,71 @@ document.addEventListener('pointerdown', e => {
   const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'rippl';
   s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`; b.appendChild(s); setTimeout(() => s.remove(), 600);
 }, { passive: true });
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#gkOpen')) geminiDialog(() => { renderData(); if (S.page === 'rules') renderRules(); }); });
+
+/* ----- image helpers / roster photo / style from reference ----- */
+function fileToB64(file, max = 1800) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res({ mime: 'image/jpeg', data: c.toDataURL('image/jpeg', .88).split(',')[1], thumb: c.toDataURL('image/jpeg', .5) }); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); }; im.src = url;
+  });
+}
+function needKey(after) { if (gKey()) return false; snack('先にGeminiのAPIキーを設定してください', 4000); geminiDialog(after); return true; }
+function rosterPhotoDialog() {
+  if (needKey(rosterPhotoDialog)) return;
+  const d = dialog({
+    title: '名簿の写真から読み取り', icon: 'photo_camera', wide: true,
+    body: `<div class="sub">名簿表・出席簿の写真を選ぶと、Geminiが出席番号と名前を読み取ります。追加する前に内容を直せます。個人名の画像はGoogleのAPIに送信されます。学校の個人情報の取り扱いルールに従ってください。</div>
+    <div class="row"><label class="btn filled" style="cursor:pointer"><span class="ms">add_photo_alternate</span>写真を選ぶ／撮影<input type="file" id="rpFile" accept="image/*" hidden></label><span class="sub" id="rpSt"></span></div>
+    <div id="rpOut" class="stack"></div>`,
+    actions: [{ label: '閉じる' }]
+  });
+  $('#rpFile', d.el).onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return; const st = $('#rpSt', d.el), out = $('#rpOut', d.el); st.textContent = '画像を読み込み中…'; out.innerHTML = '';
+    try {
+      const img = await fileToB64(f); st.innerHTML = '<span class="ms sm" style="vertical-align:-4px">auto_awesome</span> AIが読み取り中…（10〜30秒）';
+      const r = await geminiJson(`この画像は学校の名簿・出席簿です。載っている児童生徒を全員、上から順に読み取り、JSONだけを返してください。
+{"students":[{"no":出席番号の数字（無ければnull）,"name":"姓名（姓と名の間のスペースは除く）","sex":"男|女|null"}]}
+ルール: 見出し・クラス名・先生の名前・合計行は含めない。ふりがなは name に含めない。読み取れない文字は推測せず、読めた範囲で。複数の列に分かれている場合は全列を出席番号順に。`, { image: img, timeout: 60000 });
+      const list = ((r && r.students) || []).filter(x => x && x.name && String(x.name).trim());
+      if (!list.length) { st.textContent = ''; out.innerHTML = '<div class="banner warn"><span class="ms">info</span><div>名前を読み取れませんでした。明るい場所で、名簿全体が写るように撮り直してください。</div></div>'; return; }
+      const exist = new Set(S.members.map(m => m.name.replace(/\s/g, '')));
+      st.textContent = `${list.length}名を読み取りました`;
+      out.innerHTML = `<div class="sub">間違いがあれば直してください。チェックを外した人は追加しません。${S.members.some(m => true) ? '（すでに登録済みの名前は最初からチェックを外しています）' : ''}</div>
+      <label class="chip" style="align-self:flex-start;cursor:pointer"><input type="checkbox" id="rpSex" hidden>男子・女子タグも付ける</label>
+      <div class="stack" style="gap:6px;max-height:340px;overflow:auto" id="rpRows">${list.map((x, i) => { const nm = String(x.name).replace(/\s/g, ''), dup = exist.has(nm); return `<div class="row" style="flex-wrap:nowrap;gap:8px"><input type="checkbox" data-i="${i}" ${dup ? '' : 'checked'} style="width:22px;height:22px;accent-color:var(--primary);flex:none"><label class="field" style="width:84px;flex:none"><span>番号</span><input data-no="${i}" inputmode="numeric" value="${x.no == null ? '' : esc(String(x.no))}"></label><label class="field grow"><span>名前${dup ? '（登録済み）' : ''}</span><input data-nm="${i}" value="${esc(nm)}"></label><span class="sub" data-sx="${i}" style="width:20px">${x.sex === '男' || x.sex === '女' ? x.sex : ''}</span></div>`; }).join('')}</div>
+      <div class="row"><button class="btn filled" id="rpAdd"><span class="ms">add</span>チェックした人を追加</button></div>`;
+      $('#rpAdd', d.el).onclick = () => {
+        const sx = $('#rpSex', d.el).checked, ms = [];
+        $$('[data-i]', d.el).forEach(c => { if (!c.checked) return; const i = c.dataset.i, nm = $(`[data-nm="${i}"]`, d.el).value.trim(); if (!nm) return; const no = $(`[data-no="${i}"]`, d.el).value.trim(), g = list[+i].sex; ms.push({ id: uid(), name: nm, tags: sx && (g === '男' || g === '女') ? [g + '子'] : [], absent: false, no: /^\d+$/.test(no) ? +no : null }); });
+        if (!ms.length) { snack('追加する人がいません'); return; }
+        let n = nextNo(); ms.forEach(m => { if (m.no == null) m.no = n; n = Math.max(n, +m.no || 0) + 1; });
+        S.members.push(...ms); S.members.sort(byNo); save(); renderMembers(); d.close(); snack(`${ms.length}名を追加しました`);
+      };
+    } catch (er) { st.textContent = ''; out.innerHTML = `<div class="banner"><span class="ms">error</span><div>${esc(er && er.message === 'img' ? '画像を開けませんでした' : gErr(er))}</div></div>`; }
+  };
+}
+const PS = 'sekigae.picstyle';
+function loadPicStyle() { try { const j = JSON.parse(localStorage.getItem(PS) || 'null'); return j ? cleanStyle(j) : null; } catch (e) { return null; } }
+function savePicStyle(st) { try { st ? localStorage.setItem(PS, JSON.stringify(st)) : localStorage.removeItem(PS); } catch (e) { } }
+picOpt.style = loadPicStyle();
+const styleFont = st => (st && st.font) || 'gothic';
+async function ensureFont(k) { try { const fam = { mincho: '"Noto Serif JP"', rounded: '"Zen Maru Gothic"', hand: '"Klee One"', gothic: '"Noto Sans JP"' }[k]; await Promise.race([Promise.all([document.fonts.load(`700 20px ${fam}`, '席替あ'), document.fonts.load(`400 14px ${fam}`, '席替あ')]), new Promise(r => setTimeout(r, 4000))]); } catch (e) { } }
+async function analyzeStyle(file) {
+  const img = await fileToB64(file, 1600);
+  const j = await geminiJson(`この画像は学校の座席表です。見た目のデザインを再現するための設定をJSONだけで返してください。色は#rrggbbの6桁。分からない項目は省略してください。
+{"font":"gothic|mincho|rounded|hand", // 名前の書体。ゴシック体/明朝体/丸ゴシック/手書き風
+ "bold":true|false, // 名前が太字か
+ "bg":"紙の背景色", "titleAlign":"left|center", "titleColor":"", "titleSize":16〜44, "titleLine":タイトルの下に線があるか,
+ "cellFill":"席の塗り色。班ごとに色分けされている場合は省略", "cellBorder":"席の枠線の色（無ければ省略）", "cellBorderW":0〜5, "dashed":枠線が点線か,
+ "radius":席の角丸(0=四角, 12=やや丸, 30=かなり丸), "textColor":"名前の文字色", "nameScale":0.7〜1.4 (名前の大きさ。標準=1),
+ "gap":席と席の間隔px(0〜28), "cellRatio":席の高さ÷幅(0.45〜2.2), "vertical":名前が縦書きか, "seatNums":席番号の小さい数字が付いているか,
+ "teacherLabel":"教卓や黒板の表記文字(例: 黒板, 教卓, 前)", "teacherPos":"top|bottom|none", "teacherFill":"その色", "teacherText":"その文字色"}`, { image: img, timeout: 60000 });
+  const st = cleanStyle(j); if (!st || !Object.keys(st).length) throw Object.assign(new Error('style'), { code: 'parse' }); return { st, thumb: img.thumb };
+}
 /* ===== Firebase sync + Google login (GitHub Pages build) ===== */
+const guest = () => { try { return localStorage.getItem('sekigae.guest') === '1'; } catch (e) { return false; } };
 const FB = (() => { const c = window.SEKIGAE_FIREBASE; return c && c.config && c.config.apiKey ? c : null; })();
 let cloud = null;
 const _save = save;
@@ -1703,7 +1877,7 @@ async function loadSdk() {
 }
 async function fbInit() {
   if (!FB) return;
-  const need = FB.requireLogin !== false;
+  const need = needLogin();
   if (need) gate('loading', '接続しています…');
   try {
     const sdk = await loadSdk(); const app = sdk.initializeApp(FB.config); let db;
@@ -1726,13 +1900,14 @@ function renderCloudBtn() {
 }
 async function onUser(user) {
   dlog('authState ' + (user ? 'user ' + (user.email || user.uid) : 'null'));
-  const need = FB.requireLogin !== false; clearTimeout(cloud.authTimer);
+  const need = needLogin(); clearTimeout(cloud.authTimer);
   if (!user && cloud.signing) return;
   cloud.signing = false;
   if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
   const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
   if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
   if (cloud.user && cloud.user.uid === user.uid) return;
+  if (guest()) { try { const cur = localStorage.getItem(LS); if (cur) localStorage.setItem('sekigae.guest.backup', cur); localStorage.removeItem('sekigae.guest'); } catch (e) { } }
   cloud.user = user;
   try { if (need && document.documentElement.classList.contains('gated')) gate('loading', 'データを読み込んでいます…'); await loadClasses(); ungate(); setStatus('ok'); }
   catch (e) { console.error(e); dlog('load err ' + (e && (e.code || e.message))); setStatus('err'); if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
@@ -1754,6 +1929,7 @@ function authMsg(e) {
   if (c === 'auth/internal-error' || c === 'auth/missing-or-invalid-nonce') return 'ログインの途中でエラーが起きました。もう一度お試しください。';
   return 'ログインに失敗しました。' + (c ? `（${c}）` : '');
 }
+const needLogin = () => FB.requireLogin !== false && !guest();
 function gate(kind, msg) {
   ensureLoaderCss();
   let g = $('#gate'); if (!g) { g = document.createElement('div'); g.id = 'gate'; g.className = 'gate'; document.body.appendChild(g); }
@@ -1764,8 +1940,10 @@ function gate(kind, msg) {
   ${loading ? `<div class="lead rise" style="animation-delay:.1s">${esc(msg || '接続しています…')}</div><div class="xlw rise" style="animation-delay:.15s"><div class="xl"></div></div>`
       : `<div class="lead rise" style="animation-delay:.1s">Googleアカウントでログインすると、名簿と席替えをどの端末でも使えます。</div>
   <div class="rise" style="animation-delay:.15s"><button class="btn g" id="gLogin">${gSvg}<span>Googleでログイン</span></button>${kind === 'retry' ? '<button class="btn text" id="gRetry" style="margin-left:8px"><span class="ms">refresh</span>再読み込み</button>' : ''}</div>
+  <div class="rise" style="animation-delay:.2s;margin-top:8px"><button class="btn text" id="gGuest"><span class="ms">person_off</span>ログインせずに使う</button><div class="sub" style="margin-top:2px;font-size:12px">データはこのブラウザ内だけに保存されます（端末間の同期はなし）</div></div>
   ${msg ? `<div class="banner rise" style="text-align:left;animation-delay:.1s"><span class="ms">error</span><div>${esc(msg)}</div></div>` : ''}
   <div class="feat rise" style="animation-delay:.2s"><span><span class="ms sm">lock</span>名簿はあなたのアカウントだけに保存</span><span><span class="ms sm">sync</span>iPadとパソコンで同期</span></div>`}</div>`;
+  const gg = $('#gGuest', g); if (gg) gg.onclick = () => { try { localStorage.setItem('sekigae.guest', '1'); } catch (e) { } ungate(); if (cloud) { clearTimeout(cloud.authTimer); setStatus('off'); } snack('ログインなしで開始しました。右上のアイコンからいつでもログインできます', 5000); };
   const b = $('#gLogin', g); if (b) b.onclick = fbLogin; const r = $('#gRetry', g); if (r) r.onclick = () => location.reload();
   document.documentElement.classList.add('gated');
 }
@@ -1778,7 +1956,7 @@ function dlog(m) { try { const a = JSON.parse(localStorage.getItem(DK) || '[]');
 function dget() { try { return JSON.parse(localStorage.getItem(DK) || '[]'); } catch (e) { return []; } }
 const PK = 'sekigae.pendingTok';
 async function credLogin(tok) {
-  const { sdk, auth } = cloud, need = FB.requireLogin !== false;
+  const { sdk, auth } = cloud, need = needLogin();
   cloud.signing = true;
   try {
     if (need) gate('loading', 'ログインしています…');
@@ -1806,7 +1984,7 @@ function loadGis() {
   return gisP;
 }
 function gisLogin() {
-  const { sdk, auth } = cloud, need = FB.requireLogin !== false;
+  const { sdk, auth } = cloud, need = needLogin();
   const fail = e => { dlog('fail ' + (e && (e.code || e.error || e.message))); const m = e && e.code ? authMsg(e) : 'Googleログインに失敗しました。' + ((e && (e.error || e.message)) ? `（${e.error || e.message}）` : ''); if (need) gate('login', m); else snack(m, 5000); };
   if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().catch(() => { }); fail({ message: 'Googleの読み込み中です。もう一度タップしてください' }); return; }
   const tc = google.accounts.oauth2.initTokenClient({
@@ -1824,7 +2002,7 @@ function gisLogin() {
 async function fbLogin() {
   dlog('login tap ' + (FB.googleClientId ? 'gis' : 'firebase') + (matchMedia('(display-mode: standalone)').matches || navigator.standalone ? ' standalone' : ''));
   if (FB.googleClientId) return gisLogin();
-  const { sdk, auth } = cloud, need = FB.requireLogin !== false; const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
+  const { sdk, auth } = cloud, need = needLogin(); const p = new sdk.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
   if (need) gate('loading', 'Googleでログインしています…');
   try {
     const r = await sdk.signInWithPopup(auth, p);
@@ -1894,7 +2072,7 @@ function accountDialog() {
   };
   dialog({
     title: 'アカウントと同期', icon: 'cloud', body: '<div id="acBody" class="stack" style="gap:20px"></div>',
-    actions: [{ label: 'ログアウト', icon: 'logout', onClick: async () => { await pushNow(); cloudDetach(); await cloud.sdk.signOut(cloud.auth); if (FB.requireLogin !== false) { try { localStorage.removeItem(LS); localStorage.removeItem(LS + '.slots'); } catch (e) { } S = defaultState(); } } }, { label: '今すぐ同期', icon: 'sync', onClick: async () => { await pushNow(); snack('同期しました'); } }, { label: '閉じる', kind: 'filled' }]
+    actions: [{ label: 'ログアウト', icon: 'logout', onClick: async () => { await pushNow(); cloudDetach(); await cloud.sdk.signOut(cloud.auth); if (needLogin()) { try { localStorage.removeItem(LS); localStorage.removeItem(LS + '.slots'); } catch (e) { } S = defaultState(); } } }, { label: '今すぐ同期', icon: 'sync', onClick: async () => { await pushNow(); snack('同期しました'); } }, { label: '閉じる', kind: 'filled' }]
   });
   render();
 }
