@@ -1,5 +1,5 @@
-<!doctype html><html lang="ja" class="pages"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="席替え"><meta name="apple-mobile-web-app-status-bar-style" content="default">
-<script src="firebase-config.js"></script><script>try{var f=window.SEKIGAE_FIREBASE;if(f&&f.config&&f.config.apiKey&&f.requireLogin!==false&&localStorage.getItem("sekigae.guest")!=="1")document.documentElement.classList.add("gated")}catch(e){}</script>
+<!doctype html><html lang="ja" class="pages"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#006874"><meta name="description" content="名前・座席レイアウト・高度な条件から、制約を満たす席替えを自動生成する無料のWebアプリ。"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="席替え"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="preconnect" href="https://www.gstatic.com" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"><link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"><link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js">
+<script src="firebase-config.js"></script><script>try{var f=window.SEKIGAE_FIREBASE;if(f&&f.config&&f.config.apiKey&&f.requireLogin!==false&&localStorage.getItem("sekigae.guest")!=="1"&&!localStorage.getItem("sekigae.hint"))document.documentElement.classList.add("gated")}catch(e){}</script>
 <title>席替えスタジオ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Klee+One:wght@400;600&family=Roboto:wght@400;500;700&display=swap">
@@ -375,6 +375,13 @@ button,.nav,.chip,.seg button,.mname{touch-action:manipulation;-webkit-tap-highl
 details.acc>*:not(summary){animation:cardIn .3s ease-out}
 }
 </style>
+<style>
+.mini2{display:grid;gap:2px;flex:none;max-width:120px;overflow:hidden}
+.mini2 .mc{width:10px;height:7px;border-radius:2px;display:block}
+.mini2 .mc.s{background:var(--surf-highest)}
+.hist{content-visibility:auto;contain-intrinsic-size:auto 64px}
+#page-data .card{animation:none!important}
+</style>
 </head><body>
 <div id="app">
   <header id="topbar">
@@ -719,7 +726,7 @@ function confirmDlg(msg, okLabel, onOk, danger = true) {
 
 /* ----- navigation ----- */
 function setPage(p) {
-  S.page = p; save();
+  S.page = p; try { localStorage.setItem(LS + '.page', p); } catch (e) { }
   $$('.nav').forEach(b => b.classList.toggle('active', b.dataset.page === p));
   $$('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + p));
   renderPage(p);
@@ -1382,6 +1389,16 @@ function initExtras() {
   });
   S.members.forEach(m => { m.tags = m.tags.filter(t => t !== '副学級委員'); }); if (S.off) S.off.deputy = false;
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.claude) navigator.serviceWorker.register('./sw.js').catch(() => { });
+  if ('serviceWorker' in navigator && !window.claude && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data !== 'updated') return;
+      if (performance.now() < 5000) { location.reload(); return; } // 開いた直後なら自動で最新版に切り替え
+      if ($('#updBar')) return; const bar = document.createElement('div'); bar.id = 'updBar'; bar.className = 'snack'; bar.style.cssText = 'display:flex;gap:12px;align-items:center;pointer-events:auto;z-index:60';
+      bar.innerHTML = '<span>新しいバージョンがあります</span><button class="btn text sm" style="color:var(--inverse-primary,#6fd7e6)">今すぐ更新</button>'; bar.querySelector('button').onclick = () => location.reload(); document.body.appendChild(bar);
+    });
+    const chk = () => navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => { });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') chk(); }); setInterval(chk, 10 * 60 * 1000);
+  }
 }
 
 /* ===== Members page (tablet-first layout) ===== */
@@ -1586,21 +1603,27 @@ function ruleDialog(rule, isTemplate) {
 /* ----- Gemini (device-local key) ----- */
 const GK = 'sekigae.gemini.key', GM = 'sekigae.gemini.model';
 const gKey = () => { try { return localStorage.getItem(GK) || ''; } catch (e) { return ''; } };
-const gModel = () => { try { return localStorage.getItem(GM) || 'gemini-2.5-flash'; } catch (e) { return 'gemini-2.5-flash'; } };
+const G_MODELS = [['gemini-3.8-flash', '3.8 Flash（標準・無料枠）'], ['gemini-3.5-flash-lite', '3.5 Flash-Lite（軽量・無料枠）'], ['gemini-3.1-pro-preview', '3.1 Pro（高精度・有料）']];
+const gModel = () => { try { const v = localStorage.getItem(GM); return G_MODELS.some(m => m[0] === v) ? v : 'gemini-3.8-flash'; } catch (e) { return 'gemini-3.8-flash'; } };
 async function geminiJson(prompt, { timeout = 30000, image = null } = {}) {
   const key = gKey(); if (!key) throw Object.assign(new Error('no key'), { code: 'nokey' });
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), timeout);
-  try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(gModel())}:generateContent`, {
-      method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : []), { text: prompt }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
-    });
-    if (!r.ok) { let m = ''; try { m = (await r.json()).error.message; } catch (e) { } throw Object.assign(new Error(m || 'http ' + r.status), { code: r.status === 400 || r.status === 403 ? 'badkey' : r.status === 429 ? 'rate' : 'http', status: r.status }); }
-    const j = await r.json(); const tx = ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');
-    if (!tx) throw Object.assign(new Error('empty'), { code: 'empty' });
-    return JSON.parse(tx.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
-  } catch (e) { if (e.name === 'AbortError') throw Object.assign(new Error('timeout'), { code: 'timeout' }); if (e instanceof SyntaxError) throw Object.assign(e, { code: 'parse' }); if (!e.code) e.code = 'net'; throw e; }
-  finally { clearTimeout(t); }
+  const chain = [...new Set([gModel(), 'gemini-3.8-flash', 'gemini-3.5-flash-lite'])];
+  let lastErr = null;
+  for (const mdl of chain) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), timeout);
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(mdl)}:generateContent`, {
+        method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : []), { text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } })
+      });
+      if (!r.ok) { let m = ''; try { m = (await r.json()).error.message; } catch (e) { } const er = Object.assign(new Error(m || 'http ' + r.status), { code: r.status === 400 && /API key/i.test(m) || r.status === 403 && /key|permission/i.test(m) ? 'badkey' : r.status === 429 ? 'rate' : 'http', status: r.status }); if ((r.status === 404 || (r.status === 400 && /model/i.test(m) && !/API key/i.test(m)) || (r.status === 429 && mdl !== chain[chain.length - 1])) && mdl !== chain[chain.length - 1]) { lastErr = er; continue; } throw er; }
+      const j = await r.json(); const tx = ((((j.candidates || [])[0] || {}).content || {}).parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+      if (!tx) throw Object.assign(new Error('empty'), { code: 'empty' });
+      return JSON.parse(tx.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+    } catch (e) { if (e.name === 'AbortError') throw Object.assign(new Error('timeout'), { code: 'timeout' }); if (e instanceof SyntaxError) throw Object.assign(e, { code: 'parse' }); if (!e.code) e.code = 'net'; throw e; }
+    finally { clearTimeout(t); }
+  }
+  throw lastErr || Object.assign(new Error('fail'), { code: 'http' });
 }
 const gErr = e => ({ nokey: 'APIキーが未設定です', badkey: 'APIキーが正しくないか、権限がありません', rate: '利用上限に達しました。少し待ってください', timeout: '応答に時間がかかりすぎました', net: '通信できませんでした', parse: 'AIの返答を解釈できませんでした', empty: 'AIから返答がありませんでした' }[e && e.code] || 'AIの呼び出しに失敗しました');
 function geminiDialog(after) {
@@ -1608,7 +1631,7 @@ function geminiDialog(after) {
     title: 'Gemini AI の設定', icon: 'auto_awesome',
     body: `<div class="sub">Google AI Studio（aistudio.google.com/apikey）で発行したAPIキーを入れると、文章での条件入力などでGeminiを使います。キーは<b>この端末のブラウザにだけ</b>保存され、クラウド同期やバックアップには含まれません。</div>
     <label class="field"><span>APIキー</span><input id="gkKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(gKey())}" placeholder="AIza..."></label>
-    <div><div class="lbl">モデル</div><div class="seg" id="gkSeg">${[['gemini-2.5-flash', '標準（速い）'], ['gemini-2.5-flash-lite', '軽量'], ['gemini-2.5-pro', '高精度']].map(([v, l]) => `<button data-m="${v}" class="${gModel() === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div><div class="lbl">モデル</div><div class="seg" id="gkSeg">${G_MODELS.map(([v, l]) => `<button data-m="${v}" class="${gModel() === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="row"><button class="btn tonal" id="gkTest"><span class="ms">network_check</span>接続テスト</button><span class="sub" id="gkSt"></span></div>`,
     actions: [{ label: 'キーを削除', onClick: () => { try { localStorage.removeItem(GK); } catch (e) { } snack('APIキーを削除しました'); after && after(); } }, { label: '保存', kind: 'filled', onClick: () => { const v = $('#gkKey', d.el).value.trim(); try { v ? localStorage.setItem(GK, v) : localStorage.removeItem(GK); } catch (e) { } snack(v ? 'Geminiを有効にしました' : 'APIキーを削除しました'); after && after(); } }]
   });
@@ -1724,6 +1747,7 @@ function histStats() {
   S.history.forEach(h => { if (h.rows !== L.rows || h.cols !== L.cols) return; const rs = [...new Set(Object.keys(h.assign).filter(ci => h.shape[ci] === '1').map(ci => Math.floor(ci / L.cols)))].sort((a, b) => a - b); for (const [ci, id] of Object.entries(h.assign)) { if (!id || !st[id]) continue; const r = Math.floor(ci / L.cols); st[id].n++; if (r === rs[0]) st[id].f++; if (r === rs[rs.length - 1]) st[id].b++; } });
   return st;
 }
+let histShow = 6;
 function renderData() {
   const el = $('#page-data'); const L = S.layout;
   el.innerHTML = `
@@ -1752,13 +1776,15 @@ function renderData() {
     </div>
   </div>`;
   const hl = $('#histList');
-  hl.innerHTML = S.history.length ? S.history.map((h, k) => {
+  const shown = Math.min(S.history.length, histShow);
+  hl.innerHTML = S.history.length ? S.history.slice(0, shown).map((h, k) => {
     const old = S.history[k + 1]; let diff = '';
     if (old) { const pos = a => { const o = {}; Object.entries(a).forEach(([ci, id]) => id && (o[id] = ci)); return o; }; const a = pos(h.assign), b = pos(old.assign); diff = `前回から ${Object.keys(a).filter(id => b[id] != null && b[id] !== a[id]).length}人が移動`; }
-    const mini = h.shape.split('').map(ch => ch === '1' ? '<div class="cell seat"></div>' : '<div class="cell" style="background:transparent"></div>').join('');
-    return `<div class="hist"><div class="board mini" style="grid-template-columns:repeat(${h.cols},var(--cw));flex:none;max-width:120px;overflow:hidden">${mini}</div><div class="grow"><div style="font-weight:500">${new Date(h.ts).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${S.result && S.result.hid === h.id ? ' <span class="chip tag">表示中</span>' : ''}</div><div class="sub">${esc(diff)}${h.seed ? ` ・シード「${esc(h.seed)}」` : ''}</div></div>
+    const mini = h.shape.replace(/1/g, '<i class="mc s"></i>').replace(/0/g, '<i class="mc"></i>');
+    return `<div class="hist"><div class="mini2" style="grid-template-columns:repeat(${h.cols},10px)">${mini}</div><div class="grow"><div style="font-weight:500">${new Date(h.ts).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}${S.result && S.result.hid === h.id ? ' <span class="chip tag">表示中</span>' : ''}</div><div class="sub">${esc(diff)}${h.seed ? ` ・シード「${esc(h.seed)}」` : ''}</div></div>
       <button class="icon-btn" data-hshow="${h.id}" title="この配置を表示"><span class="ms">open_in_new</span></button><button class="icon-btn" data-hdel="${h.id}" title="削除"><span class="ms">delete</span></button></div>`;
-  }).join('') : '<div class="sub">まだ履歴がありません。</div>';
+  }).join('') + (S.history.length > shown ? `<button class="btn tonal" id="histMore"><span class="ms">expand_more</span>さらに表示（残り ${S.history.length - shown} 件）</button>` : '') : '<div class="sub">まだ履歴がありません。</div>';
+  if ($('#histMore')) $('#histMore').onclick = () => { histShow += 10; renderData(); };
   $$('[data-hshow]').forEach(b => b.onclick = () => { const h = S.history.find(x => x.id === b.dataset.hshow); if (h.shape !== L.cells.map(c => c.s ? 1 : 0).join('') || h.cols !== L.cols) { snack('現在のレイアウトと形が異なるため表示できません'); return; } const a = {}; L.cells.forEach((c, i) => { if (c.s) a[i] = (h.assign[i] && memberById(h.assign[i])) ? h.assign[i] : null; }); S.result = { assign: a, hid: h.id, locked: [] }; hiddenSet.clear(); save(); setPage('shuffle'); });
   $$('[data-hdel]').forEach(b => b.onclick = () => { S.history = S.history.filter(h => h.id !== b.dataset.hdel); save(); renderData(); });
   const st = histStats();
@@ -1784,7 +1810,7 @@ function renderData() {
   const applyTheme = () => { if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme); };
   applyTheme();
   $('#btnTheme').onclick = () => { theme = theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto'; try { localStorage.setItem('sekigae.theme', theme); } catch (e) { } applyTheme(); snack({ auto: 'テーマ: 端末に合わせる', dark: 'テーマ: ダーク', light: 'テーマ: ライト' }[theme]); };
-  setPage(S.page || 'shuffle'); initExtras();
+  let pg0 = null; try { pg0 = localStorage.getItem(LS + '.page'); } catch (e) { } setPage(pg0 || S.page || 'shuffle'); initExtras();
   if (window.claude && claude.use) {
     claude.use('sample').then(s => { if (s) { caps.sample = s; if (S.page === 'rules') renderRules(); } }).catch(() => { });
     claude.use('downloads').then(d => { if (d) caps.downloads = d; }).catch(() => { });
@@ -1878,7 +1904,8 @@ async function loadSdk() {
 async function fbInit() {
   if (!FB) return;
   const need = needLogin();
-  if (need) gate('loading', '接続しています…');
+  const hint = hasHint();
+  if (need && !hint) gate('loading', '接続しています…');
   try {
     const sdk = await loadSdk(); const app = sdk.initializeApp(FB.config); let db;
     try { db = sdk.initializeFirestore(app, { localCache: sdk.persistentLocalCache({ tabManager: sdk.persistentMultipleTabManager() }) }); } catch (e) { db = sdk.getFirestore(app); }
@@ -1887,7 +1914,7 @@ async function fbInit() {
     $('#topbar').appendChild(btn);
     dlog('init ' + location.pathname); cloud.redirectErr = null; if (FB.googleClientId) loadGis().catch(() => { });
     if (sdk.getRedirectResult) sdk.getRedirectResult(cloud.auth).catch(e => { cloud.redirectErr = e; if (need && !cloud.user) gate('login', authMsg(e)); });
-    cloud.authTimer = setTimeout(() => { if (need && !cloud.user) gate('retry', 'サーバーから応答がありません。通信状況を確認して、再読み込みしてください。'); }, 12000);
+    cloud.authTimer = setTimeout(() => { if (need && !cloud.user && !hasHint()) gate('retry', 'サーバーから応答がありません。通信状況を確認して、再読み込みしてください。'); }, 12000);
     sdk.onAuthStateChanged(cloud.auth, onUser);
     const pt = pendingTok(); if (pt) { dlog('resume pending token'); clearTimeout(cloud.authTimer); credLogin(pt); }
   } catch (e) { console.error(e); if (need) gate('retry', 'Firebaseに接続できません。ネットワークと設定（firebase-config.js）を確認してください。'); else snack('クラウド同期を初期化できませんでした'); }
@@ -1903,14 +1930,14 @@ async function onUser(user) {
   const need = needLogin(); clearTimeout(cloud.authTimer);
   if (!user && cloud.signing) return;
   cloud.signing = false;
-  if (!user) { cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
+  if (!user) { setHint(false); cloud.user = null; cloudDetach(); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
   const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
-  if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
+  if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); setHint(false); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
   if (cloud.user && cloud.user.uid === user.uid) return;
   if (guest()) { try { const cur = localStorage.getItem(LS); if (cur) localStorage.setItem('sekigae.guest.backup', cur); localStorage.removeItem('sekigae.guest'); } catch (e) { } }
-  cloud.user = user;
+  setHint(true); cloud.user = user;
   try { if (need && document.documentElement.classList.contains('gated')) gate('loading', 'データを読み込んでいます…'); await loadClasses(); ungate(); setStatus('ok'); }
-  catch (e) { console.error(e); dlog('load err ' + (e && (e.code || e.message))); setStatus('err'); if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
+  catch (e) { console.error(e); dlog('load err ' + (e && (e.code || e.message))); setStatus('err'); if (need && !document.documentElement.classList.contains('gated') && hasHint()) snack('オフラインか通信エラーのため、この端末のデータで動いています', 5000); else if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
 }
 
 
@@ -1929,6 +1956,8 @@ function authMsg(e) {
   if (c === 'auth/internal-error' || c === 'auth/missing-or-invalid-nonce') return 'ログインの途中でエラーが起きました。もう一度お試しください。';
   return 'ログインに失敗しました。' + (c ? `（${c}）` : '');
 }
+const hasHint = () => { try { return !!localStorage.getItem('sekigae.hint'); } catch (e) { return false; } };
+const setHint = v => { try { v ? localStorage.setItem('sekigae.hint', '1') : localStorage.removeItem('sekigae.hint'); } catch (e) { } };
 const needLogin = () => FB.requireLogin !== false && !guest();
 function gate(kind, msg) {
   ensureLoaderCss();

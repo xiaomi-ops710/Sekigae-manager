@@ -1,4 +1,4 @@
-const C='sekigae-v5';
+const C='sekigae-v6';
 const HOSTS=/^(fonts\.googleapis\.com|fonts\.gstatic\.com|www\.gstatic\.com)$/;
 const PRE=['./','index.html','firebase-config.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(PRE)).then(()=>self.skipWaiting()));});
@@ -13,9 +13,10 @@ self.addEventListener('fetch',e=>{
     const cached=await cache.match(rq,{ignoreSearch:rq.mode==='navigate'})||(rq.mode==='navigate'?await cache.match('index.html'):undefined);
     const net=fetch(rq).then(async r=>{
       if(r&&(r.ok||r.type==='opaque')){
-        const old=cached&&cached.headers.get('etag'),nw=r.headers&&r.headers.get('etag');
+        let changed=false;
+        if(rq.mode==='navigate'&&cached&&r.ok){try{const [a,b]=await Promise.all([cached.clone().text(),r.clone().text()]);changed=a!==b;}catch(e){}}
         await cache.put(rq,r.clone());
-        if(rq.mode==='navigate'&&old&&nw&&old!==nw){const cl=await self.clients.matchAll();cl.forEach(c=>c.postMessage('updated'));}
+        if(changed){const cl=await self.clients.matchAll();cl.forEach(c=>c.postMessage('updated'));}
       }
       return r;
     }).catch(()=>cached);
