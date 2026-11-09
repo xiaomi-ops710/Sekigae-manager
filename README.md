@@ -84,7 +84,7 @@ service cloud.firestore {
 ### 3. Gemini（Firebase AI Logic）
 1. Firebaseコンソールで **AI Logic** を開き、「開始」を押します。Gemini Developer API を選びます。
 2. 2026年7月以降は、AI Logic で **App Check が必須** です。次の「App Check」を設定してください。
-3. 使うモデルは `index.html` 内の `AI_MODELS`（既定：`gemini-2.5-flash`、予備：`gemini-2.5-flash-lite`）で変更できます。Firebaseが対応するモデル名は、ドキュメントの最新版で確認してください。
+3. 使うモデルは `index.html` 内の `AI_MODELS` で変更できます（既定：`gemini-3.8-flash`、予備：`gemini-3.5-flash-lite`）。モデルは世代交代が早いので、Firebase AI Logic の「対応モデル」ページで、廃止予定のないモデル名を確認してください。`gemini-2.5-*` は2026年10月に廃止予定です。
 
 ### 4. App Check（AI機能の保護）
 1. Firebaseコンソールの **App Check** で、ウェブアプリを登録します。プロバイダは **reCAPTCHA v3**（または reCAPTCHA Enterprise）を選び、サイトキーを取得します。
