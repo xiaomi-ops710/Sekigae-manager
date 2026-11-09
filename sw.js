@@ -1,4 +1,4 @@
-const C='sekigae-v7';
+const C='sekigae-v8';
 const HOSTS=/^(fonts\.googleapis\.com|fonts\.gstatic\.com|www\.gstatic\.com)$/;
 const PRE=['./','index.html','firebase-config.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(PRE)).then(()=>self.skipWaiting()));});
