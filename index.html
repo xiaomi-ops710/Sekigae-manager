@@ -554,6 +554,41 @@ details.acc>*:not(summary){animation:cardIn .3s ease-out}
 .cmsg.failed{outline:1px solid var(--error)}
 .cmsg.failed .mst{color:var(--error);opacity:1}
 </style>
+<style>
+/* 読み込み中：枠（円弧）だけが回る。アイコンは回らない */
+.spinner{display:inline-block;width:18px;height:18px;flex:none;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(127,127,127,.28);border-top-color:var(--primary);animation:spinring .8s linear infinite}
+@keyframes spinring{to{transform:rotate(360deg)}}
+/* チャット：メッセージアプリ風の吹き出し */
+.chatcard{padding-bottom:12px}
+.chatbox{height:340px;overflow:auto;display:flex;flex-direction:column;gap:2px;padding:12px 8px;border-radius:20px;background:var(--surf-highest)}
+.chat-empty{margin:auto;text-align:center;color:var(--on-surface-v);display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px}
+.chat-empty .ms{font-size:36px;opacity:.5}
+.cdate{align-self:center;margin:8px 0 4px;font-size:11.5px;color:var(--on-surface-v);background:var(--surf);padding:2px 10px;border-radius:999px}
+.brow{display:flex;gap:8px;align-items:flex-end;max-width:100%;margin-top:8px}
+.brow.grouped{margin-top:1px}
+.brow.me{flex-direction:row-reverse}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--tertiary-c);color:var(--on-tertiary-c);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.avatar.ghost{background:transparent}
+.bcol{display:flex;flex-direction:column;min-width:0;max-width:78%}
+.brow.me .bcol{align-items:flex-end}
+.bname{font-size:12px;color:var(--on-surface-v);margin:0 0 2px 4px}
+.bline{display:flex;align-items:flex-end;gap:6px;max-width:100%}
+.bubble{padding:8px 13px;border-radius:18px;background:var(--surf);font-size:15px;line-height:1.4;word-break:break-word;white-space:pre-wrap;box-shadow:0 1px 1px rgba(0,0,0,.06)}
+.brow.them.grouped .bubble{border-top-left-radius:6px}
+.brow.me .bubble{background:var(--primary);color:var(--on-primary);border-bottom-right-radius:6px}
+.brow.me.grouped .bubble{border-top-right-radius:6px}
+.bubble.sending{opacity:.6}
+.bubble.failed{outline:2px solid var(--error)}
+.btime{font-size:11px;color:var(--on-surface-v);white-space:nowrap;opacity:.8}
+.bst{font-size:11.5px;color:var(--on-surface-v);margin-top:2px}
+.brow.me .bst{text-align:right}
+.bst.err{color:var(--error)}
+.linkbtn{background:none;border:0;color:var(--primary);font:600 11.5px var(--font);padding:0 2px;cursor:pointer;text-decoration:underline}
+.chatbar{display:flex;gap:8px;align-items:center;margin-top:10px}
+.chatbar input{flex:1;min-width:0;height:44px;border-radius:999px;border:1px solid var(--outline);padding:0 16px;background:var(--surf);color:inherit;font:inherit}
+.chatbar .send{width:44px;height:44px;border-radius:50%;border:0;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;cursor:pointer;flex:none}
+.chatbar .send .ms{font-size:22px}
+</style>
 </head><body>
 <div id="app">
   <header id="topbar">
@@ -1339,11 +1374,13 @@ function drawBoard() {
     const star = show && m.tags.includes('学級委員') ? '<span class="ms star fill">star</span>' : '';
     const noS = m && m.no != null && m.no !== '' ? m.no + '番' : ''; const tg = show ? [noS, ...m.tags.filter(t => t !== '学級委員').slice(0, 2)].filter(Boolean).join(' ') : '';
     const dr = '';
-    return `<div class="${cls.join(' ')}" data-i="${i}" data-g="${c.g}"${dr} style="--nfs:${S.settings.nameSize}px"><span class="no">${nums[i]}</span><span><span class="n">${esc(hd ? '？？？' : name)}</span><span class="tg">${esc(tg)}</span></span>${star}</div>`;
+    return `<div class="${cls.join(' ')}" data-i="${i}" data-g="${c.g}"${dr}${m ? ' data-mid="' + m.id + '"' : ''} style="--nfs:${S.settings.nameSize}px"><span class="no">${nums[i]}</span><span><span class="n">${esc(hd ? '？？？' : name)}</span><span class="tg">${esc(tg)}</span></span>${star}</div>`;
   }).join('');
   const teacher = `<div class="teacher"><span class="ms">podium</span>教卓・黒板</div>`;
   const un = unplaced();
+  const _fb = flipBegin(host);
   host.innerHTML = `${S.view === 'teacher' && L.teacher ? teacher : ''}<div class="board-wrap"><div class="board res${fsOn ? ' fs' : ''}" style="grid-template-columns:repeat(${L.cols},var(--cw));--cols:${L.cols}">${cells}</div></div>${S.view === 'student' && L.teacher ? `<div style="margin-top:12px">${teacher}</div>` : ''}${un.length ? `<div class="tray"><span class="sub" style="align-self:center">未配置 ${un.length}名（選んでから席をタップ）</span>${un.map(m => `<button class="chip ${trayPick === m.id ? 'sel' : ''}" data-tray="${m.id}">${esc(m.name)}</button>`).join('')}</div>` : ''}`;
+  flipEnd(host, _fb);
   $$('.cell[data-i]', host).forEach(c => {
     const i = +c.dataset.i; c.onclick = () => { if (Date.now() < lpSuppress) return; onCellClick(i); };
     c.ondragstart = e => { dragFrom = i; try { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; } catch (x) { } };
@@ -2296,23 +2333,25 @@ function initAI(sdk, app) {
   });
 })();
 
-/* ===== オンラインルーム（接続の管理・自動再接続・定期の取り直し・即時のチャット表示・席の同期・在席） =====
+/* ===== オンラインルーム（高速な同期・接続の見張り・即時表示・固定・スライド・吹き出しチャット） =====
  * Firestore: rooms/{code}（board） / participants/{uid}（在席・最後の席） / messages/{id}
- * 受信は onSnapshot（リアルタイム）を基本に、切れたら自動で張り直し、一定時間ごとに取り直して取りこぼしを防ぐ。 */
-const POLL_MS = window.__SEK_POLL || 12000;
+ * 受信は onSnapshot（リアルタイム）。止まっていないかを定期的に確かめ、止まっていたら自動で張り直す。 */
+const POLL_ACTIVE = { room: window.__SEK_POLL || 6000, msg: window.__SEK_POLL_MSG || 12000, part: window.__SEK_POLL_PART || 24000 };
+const POLL_BG = 30000;
 const HB_MS = window.__SEK_HB || 30000, ONLINE_MS = 75000;
 const RM = {
   code: null, owner: false, session: null, seq: 0, joining: false, pendingCode: null,
-  unsub: {}, retry: { room: 0, parts: 0, msgs: 0 }, room: null, board: null, lastRev: null, rev: null,
+  unsub: {}, retry: { room: 0, parts: 0, msgs: 0 }, room: null, board: null, lastRev: null, liveRev: null, liveIds: null,
   parts: [], msgs: [], pending: [], cid: uid(), pushTimer: null, pushRetry: null, dirty: false,
-  sel: null, lastMirror: null, peer: null, phase: '', kind: '', log: [], lastRecv: 0, lastWake: 0,
-  hbTimer: null, tick: null, pollTimer: null, pollN: 0, rejoinTimer: null, lastSentBoard: null, gotRoom: false
+  sel: null, lastMirror: null, peer: null, phase: '', kind: '', log: [], lastRecv: 0, lastWake: 0, mode: 'swap',
+  hbTimer: null, tick: null, pollTimer: null, lastPoll: 0, pollN: 0, stallRoom: 0, stallMsg: 0, rejoinTimer: null, lastSentBoard: null, gotRoom: false
 };
 const RCH = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => { const a = new Uint32Array(8); crypto.getRandomValues(a); return Array.from(a, v => RCH[v % RCH.length]).join(''); };
 const fmtCode = c => (c && c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : (c || ''));
 const normCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const rkey = u => 'sekigae.room.' + u;
+const bkey = c => 'sekigae.board.' + c;
 const newRev = () => uid() + Date.now().toString(36);
 const roomRef = code => cloud.sdk.doc(cloud.db, 'rooms', code);
 const partRef = (code, u) => cloud.sdk.doc(cloud.db, 'rooms', code, 'participants', u);
@@ -2327,13 +2366,14 @@ const isOnline = p => !!p && p.online === true && Date.now() - pmillis(p) < ONLI
 const rmWait = ms => new Promise(r => setTimeout(r, ms));
 const errLabel = e => { const c = e && e.code; return c === 'permission-denied' ? '権限' : c === 'unavailable' ? '通信' : c === 'not-found' ? '見つからない' : c === 'deadline-exceeded' ? '時間切れ' : '不明'; };
 
-/* ----- 保存（この端末で入っていたルーム。閉じても、次に開いた時に戻るため） ----- */
+/* ----- 端末に保存（閉じても、次に開いた時に戻るため）：ルームの情報と、最後に見た席 ----- */
 function loadSession() { try { if (!cloud || !cloud.user) return null; const v = JSON.parse(localStorage.getItem(rkey(cloud.user.uid)) || 'null'); return v && v.code ? v : null; } catch (e) { return null; } }
 function saveSession(code, owner) { try { if (cloud && cloud.user) localStorage.setItem(rkey(cloud.user.uid), JSON.stringify({ code, owner: !!owner })); } catch (e) { } }
 function clearSession() { try { if (cloud && cloud.user) localStorage.removeItem(rkey(cloud.user.uid)); } catch (e) { } }
+function cacheBoard(code, json) { try { if (code && json) localStorage.setItem(bkey(code), json); } catch (e) { } }
+function cachedBoard(code) { try { return code ? JSON.parse(localStorage.getItem(bkey(code)) || 'null') : null; } catch (e) { return null; } }
 
 /* ----- 接続の経過（いま何をしているか）----- */
-const PHASE_ICON = { info: 'sync', ok: 'cloud_done', warn: 'sync_problem', err: 'error', off: 'cloud_off' };
 function setPhase(text, kind = 'info') {
   RM.phase = text; RM.kind = kind;
   RM.log.push(hhmmss(Date.now()) + '  ' + text);
@@ -2345,7 +2385,8 @@ function refreshConn() {
   const k = RM.session ? (RM.kind || 'info') : (RM.kind && RM.phase ? RM.kind : 'off');
   const text = RM.phase || (RM.session ? '接続しています' : '接続していません');
   const last = RM.session && RM.lastRecv ? `（最終受信 ${hhmmss(RM.lastRecv)}）` : '';
-  if (el) { el.className = 'conn ' + k; el.innerHTML = `<span class="ms sm${k === 'info' ? ' spin' : ''}">${PHASE_ICON[k] || 'sync'}</span><span>${esc(text)}${esc(last)}</span>`; }
+  const icon = k === 'info' ? '<span class="spinner" aria-hidden="true"></span>' : `<span class="ms sm">${{ ok: 'cloud_done', warn: 'sync_problem', err: 'error', off: 'cloud_off' }[k] || 'cloud_off'}</span>`;
+  if (el) { el.className = 'conn ' + k; el.innerHTML = `${icon}<span>${esc(text)}${esc(last)}</span>`; }
   const lg = $('#rmLog'); if (lg) lg.innerHTML = RM.log.slice(-20).map(x => `<div>${esc(x)}</div>`).join('') || '<div class="sub">まだ記録がありません</div>';
 }
 
@@ -2359,7 +2400,15 @@ function boardFromLocal() {
     assign: res ? res.assign : null, locked: res ? (res.locked || []) : [], hid: res ? res.hid : null
   };
 }
+/* 在席の記録に使う「今の席」（主催者：自分の画面／参加者：受け取った席） */
 function currentBoard() { return RM.owner ? (cloud ? boardFromLocal() : null) : RM.board; }
+/* 画面に表示する席：接続前でも、端末に残っている席をすぐ出す */
+function viewBoard() {
+  const st = loadSession();
+  const owner = RM.session ? RM.owner : !!(st && st.owner);
+  if (owner && cloud && cloud.classes) return boardFromLocal();
+  return RM.board || cachedBoard(RM.code || (st && st.code));
+}
 
 /* ----- 再試行つきの操作 ----- */
 async function withRetry(fn, label, tries = 4) {
@@ -2375,7 +2424,7 @@ async function withRetry(fn, label, tries = 4) {
   throw last;
 }
 
-/* ----- ルームへの参加・作成・退出 ----- */
+/* ----- ルームの作成・参加・退出 ----- */
 async function roomCreate() {
   if (!cloud || !cloud.user || RM.joining) return;
   RM.joining = true; const code = genCode(), m = myInfo(), rev = newRev(), { sdk } = cloud;
@@ -2413,17 +2462,16 @@ async function joinRoom(raw, auto = false) {
     if (!auto) snack('ルームに参加しました');
     return true;
   } catch (e) {
-    // 一時的な失敗：保存したコードを残して、自動で入り直す（閉じて開き直さなくてもよいように）
     saveSession(code, false);
     setPhase('参加できませんでした（' + errLabel(e) + '）。自動で入り直します', 'err');
-    scheduleRejoin(code, 12000);
+    scheduleRejoin(code, 10000);
     if (!auto) snack('参加できませんでした。通信を確認すると、自動で入り直します', 4000);
     return false;
   } finally { RM.joining = false; }
 }
 function scheduleRejoin(code, ms) {
   clearTimeout(RM.rejoinTimer);
-  RM.rejoinTimer = setTimeout(() => { const st = loadSession(); if (!RM.session && st && st.code === code && navigator.onLine !== false) joinRoom(code, true); else if (!RM.session && st && st.code === code) scheduleRejoin(code, ms); }, ms);
+  RM.rejoinTimer = setTimeout(() => { const st = loadSession(); if (!RM.session && st && st.code === code) joinRoom(code, true); }, ms);
 }
 async function roomLeave() {
   if (!cloud || !cloud.user) return;
@@ -2458,8 +2506,10 @@ function startSession(code, owner, data) {
   const s = { code, owner: !!owner, id: ++RM.seq };
   RM.session = s; RM.code = code; RM.owner = !!owner; RM.gotRoom = false; RM.room = null;
   RM.board = null; RM.parts = []; RM.msgs = []; RM.lastMirror = null; RM.peer = null; RM.lastSentBoard = null; RM.sel = null;
+  RM.liveRev = null; RM.liveIds = null; RM.stallRoom = 0; RM.stallMsg = 0;
   RM.lastRev = owner ? RM.lastRev : null; RM.retry = { room: 0, parts: 0, msgs: 0 }; RM.pending = RM.pending.filter(p => p.state !== 'sent');
-  if (data && data.board && !owner) { try { RM.board = JSON.parse(data.board); } catch (e) { } }
+  if (data && data.board && !owner) { try { RM.board = JSON.parse(data.board); cacheBoard(code, data.board); } catch (e) { } }
+  if (!RM.board && !owner) RM.board = cachedBoard(code);
   setPhase('サーバーとリアルタイムの接続を開いています…');
   ['room', 'parts', 'msgs'].forEach(k => attach(k));
   presenceStart();
@@ -2502,32 +2552,57 @@ function roomGone() {
   setPhase('ルームが閉じられました（主催者が終了しました）', 'err');
   snack('ルームが閉じられました'); renderOnline();
 }
-/* 定期の取り直し：リアルタイムが止まっていても、一定時間で最新の状態を取る */
+
+/* ----- 定期の確認（リアルタイムが止まっていないかを見張る） ----- */
 function startPoll() {
-  clearInterval(RM.pollTimer); RM.pollN = 0;
-  RM.pollTimer = setInterval(() => pollOnce('poll'), POLL_MS);
+  clearInterval(RM.pollTimer); RM.pollN = 0; RM.lastPoll = 0;
+  RM.pollTimer = setInterval(pollTick, 1000);
+}
+function pollTick() {
+  if (!RM.session || !cloud) return;
+  const active = !document.hidden && S.page === 'online';
+  if (Date.now() - RM.lastPoll >= (active ? POLL_ACTIVE.room : POLL_BG)) pollOnce(active ? 'poll' : 'bg');
 }
 async function pollOnce(src = 'poll') {
   const s = RM.session; if (!s || !cloud || navigator.onLine === false) return;
   const { sdk } = cloud;
-  RM.pollN++;
+  RM.lastPoll = Date.now(); RM.pollN++;
   try {
     const snap = await sdk.getDoc(roomRef(s.code)); if (RM.session !== s) return;
     if (!snap.exists()) { roomGone(); return; }
+    const d = snap.data();
+    // 席の更新が、リアルタイムの受信に届いていないなら「止まっている」
+    if (RM.liveRev !== null && d.rev && d.rev !== RM.liveRev && d.rev !== RM.lastRev) RM.stallRoom++; else RM.stallRoom = 0;
     onData('room', snap, src);
-    const m = await sdk.getDocs(msgsQ(s.code)); if (RM.session !== s) return; onData('msgs', m, src);
-    const p = await sdk.getDocs(partsCol(s.code)); if (RM.session !== s) return; onData('parts', p, src);
-    // 数回ごとに、リアルタイムの受信を張り直す（静かに止まっていても復旧する）
-    if (RM.pollN % 5 === 0) ['room', 'parts', 'msgs'].forEach(k => attach(k));
+    if (RM.pollN % 2 === 0) {
+      const m = await sdk.getDocs(msgsQ(s.code)); if (RM.session !== s) return;
+      const missing = RM.liveIds ? m.docs.some(x => !RM.liveIds.has(x.id)) : false;
+      RM.stallMsg = missing ? RM.stallMsg + 1 : 0;
+      onData('msgs', m, src);
+    }
+    if (RM.pollN % 4 === 0) { const p = await sdk.getDocs(partsCol(s.code)); if (RM.session !== s) return; onData('parts', p, src); }
+    if (RM.stallRoom >= 2 || RM.stallMsg >= 2) recoverStream(s, RM.stallRoom >= 2 ? '席' : 'チャット');
     else ['room', 'parts', 'msgs'].forEach(k => { if (!RM.unsub[k]) attach(k); });
-  } catch (e) { dlog('poll ' + (e && e.code)); if (RM.session === s) setPhase('最新の状態を取れませんでした。自動で再試行します', 'warn'); }
+  } catch (e) {
+    dlog('poll ' + (e && e.code));
+    if (RM.session === s) setPhase('最新の状態を取れませんでした。自動で再試行します', 'warn');
+  }
 }
-/* 画面に戻った・通信が戻った時は、すぐに取り直す */
+/* 受信が止まっていたら、通信を一度つなぎ直して、受信をすべて張り直す */
+async function recoverStream(s, what) {
+  RM.stallRoom = 0; RM.stallMsg = 0;
+  setPhase(`${what}の受信が止まっていたため、つなぎ直しています…`, 'warn');
+  try { if (cloud.sdk.disableNetwork && cloud.sdk.enableNetwork) { await cloud.sdk.disableNetwork(cloud.db); await cloud.sdk.enableNetwork(cloud.db); } } catch (e) { dlog('net ' + (e && e.code)); }
+  if (RM.session !== s) return;
+  ['room', 'parts', 'msgs'].forEach(k => attach(k));
+  setPhase('リアルタイムの接続を回復しました', 'ok');
+}
+/* 画面に戻った・通信が戻った時は、すぐに確認する */
 function onWake(why) {
   if (!cloud || !cloud.user) return;
   const now = Date.now(); if (now - RM.lastWake < 1500) return; RM.lastWake = now;
   if (RM.session) {
-    heartbeat(false); pollOnce(why);
+    heartbeat(false); RM.lastPoll = 0; pollOnce(why);
     ['room', 'parts', 'msgs'].forEach(k => { if (!RM.unsub[k]) attach(k); });
   } else {
     const st = loadSession();
@@ -2546,12 +2621,14 @@ function onData(kind, snap, src) {
   if (kind === 'room') {
     if (!snap.exists()) { roomGone(); return; }
     if (!RM.gotRoom) { RM.gotRoom = true; setPhase(src === 'live' ? '席の情報を受信しました。変更はリアルタイムで届きます' : '最新の席を取得しました', 'ok'); }
+    if (src === 'live') RM.liveRev = snap.data().rev || null;
     applyRoomDoc(snap.data());
   } else if (kind === 'parts') {
     RM.parts = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
     refreshOnline();
   } else if (kind === 'msgs') {
     RM.msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (src === 'live') { RM.liveIds = new Set(RM.msgs.map(m => m.id)); RM.stallMsg = 0; }
     RM.pending = RM.pending.filter(p => !RM.msgs.some(m => m.cid === p.cid));
     renderChat();
   }
@@ -2564,33 +2641,34 @@ function applyRoomDoc(d) {
     if (b) {
       RM.lastRev = d.rev;
       if (RM.owner) { if (d.byRole === 'guest' && d.by !== RM.cid) applyProposal(b); }
-      else { RM.board = b; setPhase('席が更新されました（' + hhmm(Date.now()) + '）', 'ok'); }
+      else { RM.board = b; cacheBoard(RM.code, d.board); setPhase('席が更新されました（' + hhmmss(Date.now()) + '）', 'ok'); }
     }
   }
   if (!RM.owner && d.board && !RM.board) { try { RM.board = JSON.parse(d.board); } catch (e) { } }
   refreshOnline();
 }
 
-/* ----- 席の同期（主催者：保存を確実にする／参加者：提案） ----- */
+/* ----- 席の同期（主催者：すぐ保存／参加者：提案） ----- */
 function roomSchedule() {
   if (!RM.session || !RM.owner) return;
   RM.dirty = true;
-  clearTimeout(RM.pushTimer); RM.pushTimer = setTimeout(roomPush, 350);
+  clearTimeout(RM.pushTimer); RM.pushTimer = setTimeout(roomPush, 200);
   if (S.page === 'online') refreshOnline();
 }
 async function roomPush() {
   RM.pushTimer = null;
   const s = RM.session; if (!s || !RM.owner || !cloud) return;
   const rev = newRev(); RM.lastRev = rev; RM.dirty = false;
+  const json = JSON.stringify(boardFromLocal()); cacheBoard(s.code, json);
   setPhase('席の変更を送っています…');
   try {
-    await cloud.sdk.updateDoc(roomRef(s.code), { board: JSON.stringify(boardFromLocal()), rev, byRole: 'host', by: RM.cid, updatedAt: cloud.sdk.serverTimestamp() });
+    await cloud.sdk.updateDoc(roomRef(s.code), { board: json, rev, byRole: 'host', by: RM.cid, updatedAt: cloud.sdk.serverTimestamp() });
     if (RM.session === s) setPhase('サーバーに保存しました（' + hhmmss(Date.now()) + '）', 'ok');
   } catch (e) {
     dlog('room push ' + (e && e.code));
     if (RM.session !== s) return;
     RM.dirty = true; setPhase('送れませんでした。数秒後に自動で再送します', 'warn');
-    clearTimeout(RM.pushRetry); RM.pushRetry = setTimeout(roomPush, 4000);
+    clearTimeout(RM.pushRetry); RM.pushRetry = setTimeout(roomPush, 3000);
   }
 }
 async function roomPropose(assign) {
@@ -2611,7 +2689,7 @@ async function roomPropose(assign) {
     snack('席の変更を送れませんでした。主催者が「参加者も席を入れ替えられる」をオンにしているか確認してください', 4500);
   }
 }
-/* 主催者：参加者の提案を取り込む（ピン留めの席は動かさない・重複した人は受け付けない） */
+/* 主催者：参加者の提案を取り込む（固定の席は動かさない・重複した人は受け付けない） */
 function applyProposal(b) {
   if (!S.result || !S.layout || !b || !b.assign) return;
   const res = S.result, ids = new Set(S.members.map(m => m.id));
@@ -2654,7 +2732,7 @@ async function heartbeat(offline) {
   }
 }
 
-/* ----- チャット：送った瞬間に表示し、送信状態を出す（失敗したら再送できる） ----- */
+/* ----- チャット（吹き出し）：送った瞬間に表示し、送信状態を出す（失敗したら再送） ----- */
 async function roomSend(raw) {
   const t = String(raw || '').trim().slice(0, 300); const s = RM.session;
   if (!t || !s) return;
@@ -2675,18 +2753,48 @@ async function sendPending(cid, s) {
 function renderChat() {
   const box = $('#rmMsgs'); if (!box) return;
   const uidMe = cloud && cloud.user ? cloud.user.uid : '';
-  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
   const items = RM.msgs.map(m => ({ key: m.id, uid: m.uid, name: m.name, text: m.text, ms: pmillis(m) || Date.now(), st: '' }))
     .concat(RM.pending.filter(p => !RM.msgs.some(m => m.cid === p.cid)).map(p => ({ key: p.cid, cid: p.cid, uid: p.uid, name: p.name, text: p.text, ms: p.ts, st: p.state })));
   items.sort((a, b) => a.ms - b.ms);
-  box.innerHTML = items.length ? items.map(x => `<div class="cmsg ${x.uid === uidMe ? 'me' : ''} ${x.st === 'failed' ? 'failed' : ''}"><div class="who">${esc(x.name || '')} <span class="mt">${hhmm(x.ms)}</span></div><div>${esc(x.text || '')}</div>${x.st === 'sending' ? '<div class="mst">送信中…</div>' : x.st === 'failed' ? `<div class="mst">送れませんでした <button class="btn text sm" data-retry-msg="${esc(x.cid)}">もう一度送る</button></div>` : ''}</div>`).join('')
-    : '<div class="sub" style="text-align:center;margin:auto">まだメッセージはありません</div>';
+  if (!items.length) { box.innerHTML = '<div class="chat-empty"><span class="ms">forum</span><div>まだメッセージはありません</div><div class="sub">ここで席替えの相談ができます</div></div>'; return; }
+  let html = '', prev = null;
+  items.forEach(x => {
+    const mine = x.uid === uidMe;
+    const day = new Date(x.ms).toDateString();
+    if (!prev || new Date(prev.ms).toDateString() !== day) html += `<div class="cdate"><span>${new Date(x.ms).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', weekday: 'short' })}</span></div>`;
+    const grouped = prev && prev.uid === x.uid && new Date(prev.ms).toDateString() === day && (x.ms - prev.ms) < 120000;
+    const stCls = x.st === 'failed' ? ' failed' : x.st === 'sending' ? ' sending' : '';
+    const meta = `<span class="btime">${hhmm(x.ms)}</span>`;
+    html += `<div class="brow ${mine ? 'me' : 'them'}${grouped ? ' grouped' : ''}">${!mine && !grouped ? `<div class="avatar">${esc((x.name || '?').slice(0, 1))}</div>` : (!mine ? '<div class="avatar ghost"></div>' : '')}
+      <div class="bcol">${!mine && !grouped ? `<div class="bname">${esc(x.name || '')}</div>` : ''}
+      <div class="bline">${mine ? meta : ''}<div class="bubble${stCls}">${esc(x.text || '')}</div>${mine ? '' : meta}</div>
+      ${x.st === 'sending' ? '<div class="bst">送信中…</div>' : x.st === 'failed' ? `<div class="bst err">送れませんでした <button class="linkbtn" data-retry-msg="${esc(x.cid)}">もう一度送る</button></div>` : ''}</div></div>`;
+    prev = x;
+  });
+  box.innerHTML = html;
   if (atBottom || items.some(x => x.st === 'sending')) box.scrollTop = box.scrollHeight;
+}
+
+/* ----- スライドのアニメーション：移動したメンバーが滑らかに動く（data-mid で追いかける） ----- */
+function flipBegin(el) {
+  const map = {}; if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return map;
+  el.querySelectorAll('[data-mid]').forEach(n => { map[n.dataset.mid] = n.getBoundingClientRect(); });
+  return map;
+}
+function flipEnd(el, before) {
+  if (!el || !before || !Object.keys(before).length) return;
+  el.querySelectorAll('[data-mid]').forEach(n => {
+    const a = before[n.dataset.mid]; if (!a) return;
+    const b = n.getBoundingClientRect(); const dx = a.left - b.left, dy = a.top - b.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    try { n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' }); } catch (e) { }
+  });
 }
 
 /* ----- 席の表示（参加者の画面・主催者のオンライン画面で共通） ----- */
 function mirrorHTML(b) {
-  if (!b || !b.layout || !b.layout.cells) return '<div class="empty-state"><span class="ms">hourglass_top</span><div>読み込み中…</div></div>';
+  if (!b || !b.layout || !b.layout.cells) return '<div class="empty-state"><span class="ms">hourglass_top</span><div>席を読み込んでいます…</div></div>';
   const L = b.layout, nums = {}; let n = 0;
   L.cells.forEach((c, i) => { if (c.s) nums[i] = ++n; });
   const mem = {}; (b.members || []).forEach(m => { mem[m.id] = m; });
@@ -2697,7 +2805,7 @@ function mirrorHTML(b) {
     if (!c.s) return '<div class="cell void" style="border:0;opacity:0"></div>';
     const m = b.assign && b.assign[i] ? mem[b.assign[i]] : null;
     const cls = ['cell', 'seat']; if (!m) cls.push('empty'); if (locked.has(i)) cls.push('lock'); if (RM.sel === i) cls.push('pick');
-    return `<div class="${cls.join(' ')}" data-oi="${i}" data-g="${c.g || 0}"><span class="no">${nums[i]}</span><span><span class="n">${esc(m ? m.name : '空席')}</span><span class="tg">${esc(m && m.no != null && m.no !== '' ? m.no + '番' : '')}</span></span>${m && m.star ? '<span class="ms star fill">star</span>' : ''}</div>`;
+    return `<div class="${cls.join(' ')}" data-oi="${i}" ${m ? `data-mid="${esc(m.id)}"` : ''} data-g="${c.g || 0}"><span class="no">${nums[i]}</span><span><span class="n">${esc(m ? m.name : '空席')}</span><span class="tg">${esc(m && m.no != null && m.no !== '' ? m.no + '番' : '')}</span></span>${m && m.star ? '<span class="ms star fill">star</span>' : ''}</div>`;
   }).join('');
   const teacher = '<div class="teacher"><span class="ms">podium</span>教卓・黒板</div>';
   const notYet = !b.hid ? '<div class="sub" style="text-align:center;margin-bottom:8px">まだ席替えをしていません</div>' : '';
@@ -2707,12 +2815,12 @@ function mirrorHTML(b) {
 function refreshOnline() {
   if (S.page !== 'online' || !$('#rmBoard')) { refreshConn(); return; }
   const uidMe = cloud && cloud.user ? cloud.user.uid : '';
-  const mh = mirrorHTML(currentBoard() || null);
-  if (mh !== RM.lastMirror) { $('#rmBoard').innerHTML = mh; RM.lastMirror = mh; }
-  $('#rmCount').textContent = RM.parts.length;
-  $('#rmOnline').textContent = RM.parts.filter(isOnline).length;
+  const mh = mirrorHTML(viewBoard());
+  if (mh !== RM.lastMirror) { const el = $('#rmBoard'); const fb = flipBegin(el); el.innerHTML = mh; flipEnd(el, fb); RM.lastMirror = mh; }
+  if ($('#rmCount')) $('#rmCount').textContent = RM.parts.length;
+  if ($('#rmOnline')) $('#rmOnline').textContent = RM.parts.filter(isOnline).length;
   const sorted = [...RM.parts].sort((a, b) => (isOnline(b) - isOnline(a)) || String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
-  $('#rmParts').innerHTML = sorted.map(p => {
+  if ($('#rmParts')) $('#rmParts').innerHTML = sorted.map(p => {
     const on = isOnline(p), me = p.uid === uidMe, t = pmillis(p);
     const st = on ? 'オンライン' : (t ? `オフライン・最終 ${hhmm(t)}` : 'オフライン');
     return `<button class="prow ${on ? 'on' : 'off'} ${RM.peer === p.uid ? 'sel' : ''}" data-peer="${esc(p.uid)}"><span class="pdot"></span><span class="grow"><b>${esc(p.name || '参加者')}</b>${me ? ' <span class="sub">（あなた）</span>' : ''}<span class="sub" style="display:block">${st}</span></span><span class="chip tag">${p.role === 'host' ? '主催' : '参加'}</span></button>`;
@@ -2720,8 +2828,9 @@ function refreshOnline() {
   peerRefresh();
   renderChat();
   const ed = $('#rmEditors'); if (ed && RM.room) ed.checked = RM.room.editors === 'all';
-  $('#rmHint').textContent = RM.owner
-    ? '席の変更は「席替え」画面でも、ここの席を2つタップしても行えます。変更は参加者の画面にすぐ反映されます。'
+  const modeEl = $('#rmMode'); if (modeEl) modeEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === RM.mode));
+  if ($('#rmHint')) $('#rmHint').textContent = RM.owner && RM.session
+    ? (RM.mode === 'pin' ? '固定：席をタップすると、その人を席に固定します（固定の席は入れ替えません）。' : '入れ替え：席を2つタップすると、入れ替わります。変更は参加者の画面にすぐ反映されます。')
     : (RM.room && RM.room.editors === 'all' ? '席を2つタップすると、入れ替えを主催者に提案できます。' : '主催者が席を変更すると、ここに自動で反映されます。');
   refreshConn();
 }
@@ -2742,6 +2851,12 @@ function onMirrorTap(i) {
   if (!RM.session) return;
   if (RM.owner) {
     if (!S.result) { snack('先に席替えを実行してください'); return; }
+    if (RM.mode === 'pin') {
+      if (!S.result.assign[i] && !(S.result.locked || []).includes(i)) { snack('空席は固定できません'); return; }
+      pushUndo(); S.result.locked = S.result.locked || [];
+      const k = S.result.locked.indexOf(i); if (k >= 0) S.result.locked.splice(k, 1); else S.result.locked.push(i);
+      afterEdit(); refreshOnline(); return;
+    }
     if (RM.sel == null) { RM.sel = i; refreshOnline(); return; }
     const a = RM.sel; RM.sel = null;
     if (a !== i) swapCells(a, i);
@@ -2755,7 +2870,7 @@ function onMirrorTap(i) {
   const a = RM.sel; RM.sel = null;
   if (a === i) { refreshOnline(); return; }
   const locked = new Set(b.locked || []);
-  if (locked.has(a) || locked.has(i)) { snack('ピン留めされた席は動かせません'); refreshOnline(); return; }
+  if (locked.has(a) || locked.has(i)) { snack('固定された席は動かせません'); refreshOnline(); return; }
   const assign = { ...(b.assign || {}) };
   const x = assign[a] ?? null, y = assign[i] ?? null;
   assign[a] = y; assign[i] = x;
@@ -2789,7 +2904,9 @@ function renderOnline() {
     const b = $('#rmLogin'); if (b) b.onclick = () => fbLogin();
     return;
   }
-  if (!RM.session) {
+  const st = loadSession();
+  const code = RM.session ? RM.code : (st && st.code);
+  if (!code) {
     el.innerHTML = `
     <div class="h-row"><h2>オンライン</h2><span class="sub">コードで同じ座席表を共有できます</span></div>
     <div id="rmConn" class="conn off"></div>
@@ -2808,37 +2925,42 @@ function renderOnline() {
     refreshConn();
     return;
   }
+  const owner = RM.session ? RM.owner : !!(st && st.owner);
   el.innerHTML = `
-  <div class="h-row"><h2>オンライン</h2><span class="sub">ルーム <b class="rmcode">${esc(fmtCode(RM.code))}</b></span><span class="grow"></span>
+  <div class="h-row"><h2>オンライン</h2><span class="sub">ルーム <b class="rmcode">${esc(fmtCode(code))}</b></span><span class="grow"></span>
     <button class="btn outlined sm" id="rmCopy"><span class="ms">content_copy</span>コードをコピー</button>
     <button class="btn outlined sm" id="rmRefresh"><span class="ms">refresh</span>今すぐ更新</button>
-    <button class="btn text sm danger" id="rmLeave"><span class="ms">${RM.owner ? 'delete' : 'logout'}</span>${RM.owner ? 'ルームを閉じる' : '退出'}</button></div>
+    <button class="btn text sm danger" id="rmLeave"><span class="ms">${owner ? 'delete' : 'logout'}</span>${owner ? 'ルームを閉じる' : '退出'}</button></div>
   <div id="rmConn" class="conn info"></div>
   <div class="mem-layout">
     <div class="stack">
       <div class="card" id="rmCard">
-        <div class="row" style="margin-bottom:8px"><span class="sub grow" id="rmHint"></span><button class="icon-btn" id="rmFs" title="投影表示（全画面・席だけ）"><span class="ms">cast</span></button></div>
+        <div class="row" style="margin-bottom:8px;align-items:center"><span class="sub grow" id="rmHint"></span>
+          ${owner ? '<div class="seg" id="rmMode"><button data-m="swap" class="on">入れ替え</button><button data-m="pin">固定</button></div>' : ''}
+          <button class="icon-btn" id="rmFs" title="投影表示（全画面・席だけ）"><span class="ms">cast</span></button></div>
         <div id="rmBoard"></div>
       </div>
       <div id="rmPeer" class="stack"></div>
     </div>
     <div class="stack">
-      ${RM.owner ? '<div class="card"><label class="switch"><input type="checkbox" id="rmEditors"><span class="grow">参加者も席を入れ替えられる<div class="sub">オフのときは、参加者は見るだけです</div></span></label></div>' : ''}
+      ${owner ? '<div class="card"><label class="switch"><input type="checkbox" id="rmEditors"><span class="grow">参加者も席を入れ替えられる<div class="sub">オフのときは、参加者は見るだけです</div></span></label></div>' : ''}
       <div class="card stack"><h3><span class="ms">group</span>参加者 <span class="sub">オンライン <b id="rmOnline">0</b> ／ 全 <b id="rmCount">0</b>名</span></h3>
         <div class="sub">名前を選ぶと、その人の今の席（オンラインの人）または最後にオンラインだった時の席が表示されます。</div>
         <div id="rmParts" class="stack" style="gap:6px"></div></div>
-      <div class="card stack"><h3><span class="ms">forum</span>チャット</h3>
+      <div class="card chatcard"><h3><span class="ms">forum</span>チャット</h3>
         <div id="rmMsgs" class="chatbox"></div>
-        <form id="rmForm" class="row" style="flex-wrap:nowrap;align-items:flex-end"><label class="field grow"><span>メッセージ</span><input id="rmIn" maxlength="300" autocomplete="off"></label><button class="btn filled sm" type="submit"><span class="ms">send</span>送信</button></form>
+        <form id="rmForm" class="chatbar"><input id="rmIn" maxlength="300" autocomplete="off" placeholder="メッセージ"><button class="send" type="submit" aria-label="送信"><span class="ms">arrow_upward</span></button></form>
       </div>
       <details class="card acc"><summary class="sum"><span class="ms">terminal</span>接続の詳細（いまの処理の記録）<span class="ms chev">expand_more</span></summary>
         <div id="rmLog" class="log"></div></details>
     </div>
   </div>`;
-  $('#rmCopy').onclick = () => copyText(RM.code, 'ルームコードをコピーしました');
-  $('#rmRefresh').onclick = () => { setPhase('手動で最新の状態を取得しています…'); pollOnce('手動'); ['room', 'parts', 'msgs'].forEach(k => attach(k)); };
+  RM.lastMirror = null;   // 画面を作り直したので、席は必ず描き直す（開いてすぐ表示されるように）
+  $('#rmCopy').onclick = () => copyText(code, 'ルームコードをコピーしました');
+  $('#rmRefresh').onclick = () => { setPhase('手動で最新の状態を取得しています…'); if (RM.session) { RM.lastPoll = 0; pollOnce('手動'); ['room', 'parts', 'msgs'].forEach(k => attach(k)); } else if (st) joinRoom(st.code, true); };
   $('#rmLeave').onclick = roomLeave;
   const ed = $('#rmEditors'); if (ed) ed.onchange = e => roomSetEditors(e.target.checked);
+  const md = $('#rmMode'); if (md) md.onclick = e => { const b = e.target.closest('button'); if (!b) return; RM.mode = b.dataset.m; RM.sel = null; refreshOnline(); };
   $('#rmFs').onclick = openPresent;
   $('#rmBoard').onclick = e => { const c = e.target.closest && e.target.closest('[data-oi]'); if (c) onMirrorTap(+c.dataset.oi); };
   $('#rmParts').onclick = e => { const b = e.target.closest && e.target.closest('[data-peer]'); if (!b) return; RM.peer = RM.peer === b.dataset.peer ? null : b.dataset.peer; refreshOnline(); };
