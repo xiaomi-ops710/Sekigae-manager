@@ -503,6 +503,57 @@ details.acc>*:not(summary){animation:cardIn .3s ease-out}
 #topbar h1{flex:1 1 auto}
 .visually-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
 </style>
+<style>
+/* 投影表示：全画面・席だけ・大きな文字（教室の前のスクリーンで見やすく） */
+#present{position:fixed;inset:0;z-index:80;background:#0b0e14;color:#fff;overflow:hidden;touch-action:manipulation}
+#present[hidden]{display:none!important}
+#present .present-x{position:absolute;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;z-index:2;opacity:.35;cursor:pointer;display:grid;place-items:center}
+#present .present-x:hover,#present .present-x:focus{opacity:.9}
+#present .present-wrap{position:absolute;inset:0;box-sizing:border-box;padding:max(2.5vmin,env(safe-area-inset-top)) max(2.5vmin,env(safe-area-inset-right)) max(2.5vmin,env(safe-area-inset-bottom)) max(2.5vmin,env(safe-area-inset-left))}
+.pv-grid{display:grid;gap:clamp(4px,1vmin,12px);width:100%;height:100%;box-sizing:border-box}
+.pv-seat{container-type:size;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;padding:1.2cqmin 1.5cqmin;border-radius:clamp(8px,1.6vmin,18px);background:#1d2635;text-align:center;box-sizing:border-box}
+.pv-seat.empty{background:transparent;outline:2px dashed rgba(255,255,255,.12);outline-offset:-2px}
+.pv-void{min-width:0;min-height:0}
+.pv-no{position:absolute;top:1.2cqmin;left:2cqmin;font-size:clamp(9px,11cqmin,18px);opacity:.55;font-variant-numeric:tabular-nums}
+.pv-name{font-size:clamp(12px,26cqmin,96px);font-weight:800;line-height:1.1;overflow-wrap:anywhere;max-width:100%}
+.pv-sub{font-size:clamp(9px,11cqmin,28px);opacity:.75;margin-top:.6cqmin}
+/* オンライン：接続の経過・在席・相手の席 */
+.conn{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:14px;background:var(--surf-highest);font-size:13px;margin:0 0 10px}
+.conn .ms{flex:none}
+.conn.ok{background:var(--ok-c)}
+.conn.warn{background:#fff1d6;color:#5b3b00}
+.conn.err{background:var(--err-c,#ffdad6);color:var(--error)}
+.conn.off{color:var(--on-surface-v)}
+.ms.spin{animation:msspin 1s linear infinite}
+@keyframes msspin{to{transform:rotate(360deg)}}
+.prow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;padding:8px 10px;border-radius:14px;background:var(--surf-highest);color:inherit;cursor:pointer;font:inherit}
+.prow.sel{outline:2px solid var(--primary)}
+.pdot{width:10px;height:10px;border-radius:50%;background:var(--outline);flex:none}
+.prow.on .pdot{background:var(--ok);box-shadow:0 0 0 3px var(--ok-c)}
+.prow.off .grow{opacity:.85}
+.log{font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.7;max-height:220px;overflow:auto;color:var(--on-surface-v)}
+.peer .card-head{align-items:center}
+/* ホーム画面への追加の案内（目立たないように、本文の上に細く表示） */
+.pwa-tip{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px;margin:0 0 10px;border-radius:14px;background:var(--surf-highest);font-size:12.5px;line-height:1.45;color:var(--on-surface-v)}
+.pwa-tip>.ms:first-child{flex:none;opacity:.7}
+.pwa-tip .pwa-txt{flex:1;min-width:0}
+.pwa-tip .icon-btn{width:30px;height:30px;flex:none}
+.pwa-tip .btn{flex:none}
+.pv-seat[data-g="1"]{background:color-mix(in srgb,var(--g1) 40%,#151b26)}
+.pv-seat[data-g="2"]{background:color-mix(in srgb,var(--g2) 40%,#151b26)}
+.pv-seat[data-g="3"]{background:color-mix(in srgb,var(--g3) 40%,#151b26)}
+.pv-seat[data-g="4"]{background:color-mix(in srgb,var(--g4) 40%,#151b26)}
+.pv-seat[data-g="5"]{background:color-mix(in srgb,var(--g5) 40%,#151b26)}
+.pv-seat[data-g="6"]{background:color-mix(in srgb,var(--g6) 40%,#151b26)}
+.pv-seat[data-g="7"]{background:color-mix(in srgb,var(--g7) 40%,#151b26)}
+.pv-seat[data-g="8"]{background:color-mix(in srgb,var(--g8) 40%,#151b26)}
+</style>
+<style>
+.cmsg .mt{font-weight:400;opacity:.6;margin-left:6px;font-size:11px}
+.cmsg .mst{font-size:12px;opacity:.8;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cmsg.failed{outline:1px solid var(--error)}
+.cmsg.failed .mst{color:var(--error);opacity:1}
+</style>
 </head><body>
 <div id="app">
   <header id="topbar">
@@ -984,13 +1035,44 @@ function renderSettings() {
 /* ----- run ----- */
 function clearTimers() { timers.forEach(t => { clearTimeout(t); clearInterval(t); }); timers = []; rolling = null; }
 
-function togglePresent() {
-  const card = $('#resCard'); fsOn = !fsOn;
-  if (fsOn) { try { (card.requestFullscreen ? card.requestFullscreen() : Promise.reject()).catch(() => { }); } catch (e) { } card.style.background = 'var(--surface)'; }
-  else { try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch (e) { } card.style.background = ''; }
-  drawBoard();
+/* ===== 投影表示：全画面で「席」だけを大きく表示（教室の前のスクリーン向け） ===== */
+let presentOpen = false, wakeLk = null;
+function togglePresent() { if (presentOpen) closePresent(); else openPresent(); }
+function openPresent() {
+  if (!S.result) { snack('先に席替えを実行してください'); return; }
+  presentOpen = true;
+  let ov = $('#present');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'present'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', '投影表示'); document.body.appendChild(ov); }
+  ov.hidden = false;
+  ov.innerHTML = '<button class="present-x" id="presentX" aria-label="投影表示を閉じる" title="閉じる（Escキー）"><span class="ms">close</span></button><div class="present-wrap" id="presentBody"></div>';
+  $('#presentX').onclick = closePresent;
+  renderPresent();
+  try { if (ov.requestFullscreen) ov.requestFullscreen().catch(() => { }); } catch (e) { }
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(w => { wakeLk = w; }).catch(() => { }); } catch (e) { }
 }
-document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && fsOn) { fsOn = false; const c = $('#resCard'); if (c) c.style.background = ''; drawBoard(); } });
+function closePresent() {
+  presentOpen = false;
+  const ov = $('#present'); if (ov) { ov.hidden = true; ov.innerHTML = ''; }
+  try { if (document.fullscreenElement) document.exitFullscreen().catch(() => { }); } catch (e) { }
+  if (wakeLk) { try { wakeLk.release(); } catch (e) { } wakeLk = null; }
+}
+function renderPresent() {
+  const body = $('#presentBody'); if (!body || !presentOpen) return;
+  const res = S.result; if (!res) { closePresent(); return; }
+  const L = S.layout, nums = seatNumbers();
+  const rollNames = presentList().map(m => m.name);
+  const cells = viewOrder().map(i => {
+    const c = L.cells[i]; if (!c.s) return '<div class="pv-void"></div>';
+    const id = res.assign[i]; const m = id ? memberById(id) : null;
+    const hd = hiddenSet.has(i), rl = rolling && rolling.has(i);
+    const name = rl ? (rollNames[Math.floor(Math.random() * rollNames.length)] || '') : (m ? (hd ? '？？？' : m.name) : '');
+    const no = m && m.no != null && m.no !== '' && !hd && !rl ? `<span class="pv-sub">${esc(m.no)}番</span>` : '';
+    return `<div class="pv-seat ${m || rl ? '' : 'empty'}" data-g="${c.g || 0}"><span class="pv-no">${nums[i]}</span><span class="pv-name">${esc(name)}</span>${no}</div>`;
+  }).join('');
+  body.innerHTML = `<div class="pv-grid" style="grid-template-columns:repeat(${L.cols},minmax(0,1fr));grid-template-rows:repeat(${L.rows},minmax(0,1fr))">${cells}</div>`;
+}
+document.addEventListener('keydown', e => { if (presentOpen && e.key === 'Escape') closePresent(); });
+
 
 /* ===== Members page ===== */
 let memberFilter = '';
@@ -1235,6 +1317,7 @@ function beep(f = 660, d = .06, t = 'sine', v = .05) { if (!S.settings.sound) re
 
 /* ----- board ----- */
 function drawBoard() {
+  if (presentOpen) renderPresent();
   const host = $('#boardHost'); if (!host) return;
   const L = S.layout, nums = seatNumbers(), res = S.result;
   if (!res && !S.members.length) {
@@ -2213,10 +2296,18 @@ function initAI(sdk, app) {
   });
 })();
 
-/* ===== オンラインルーム：主催者の席替えを参加者へ同期・チャット・席の入れ替え提案 =====
- * Firestore: rooms/{code}（board: 席の状態JSON） / participants/{uid} / messages/{id}
- * 主催者（ownerUid）だけが席の正本を書く。参加者は editors==='all' のときだけ席の入れ替えを提案できる。 */
-const RM = { code: null, owner: false, unsub: [], room: null, board: null, parts: [], msgs: [], lastRev: null, cid: uid(), pushTimer: null, sel: null };
+/* ===== オンラインルーム（接続の管理・自動再接続・定期の取り直し・即時のチャット表示・席の同期・在席） =====
+ * Firestore: rooms/{code}（board） / participants/{uid}（在席・最後の席） / messages/{id}
+ * 受信は onSnapshot（リアルタイム）を基本に、切れたら自動で張り直し、一定時間ごとに取り直して取りこぼしを防ぐ。 */
+const POLL_MS = window.__SEK_POLL || 12000;
+const HB_MS = window.__SEK_HB || 30000, ONLINE_MS = 75000;
+const RM = {
+  code: null, owner: false, session: null, seq: 0, joining: false, pendingCode: null,
+  unsub: {}, retry: { room: 0, parts: 0, msgs: 0 }, room: null, board: null, lastRev: null, rev: null,
+  parts: [], msgs: [], pending: [], cid: uid(), pushTimer: null, pushRetry: null, dirty: false,
+  sel: null, lastMirror: null, peer: null, phase: '', kind: '', log: [], lastRecv: 0, lastWake: 0,
+  hbTimer: null, tick: null, pollTimer: null, pollN: 0, rejoinTimer: null, lastSentBoard: null, gotRoom: false
+};
 const RCH = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => { const a = new Uint32Array(8); crypto.getRandomValues(a); return Array.from(a, v => RCH[v % RCH.length]).join(''); };
 const fmtCode = c => (c && c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : (c || ''));
@@ -2227,51 +2318,296 @@ const roomRef = code => cloud.sdk.doc(cloud.db, 'rooms', code);
 const partRef = (code, u) => cloud.sdk.doc(cloud.db, 'rooms', code, 'participants', u);
 const partsCol = code => cloud.sdk.collection(cloud.db, 'rooms', code, 'participants');
 const msgsCol = code => cloud.sdk.collection(cloud.db, 'rooms', code, 'messages');
+const msgsQ = code => cloud.sdk.query(msgsCol(code), cloud.sdk.orderBy('ts'), cloud.sdk.limitToLast(200));
 const myInfo = () => ({ uid: cloud.user.uid, name: cloud.user.displayName || cloud.user.email || '参加者' });
+const hhmm = ms => new Date(ms).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+const hhmmss = ms => new Date(ms).toLocaleTimeString('ja-JP');
+const pmillis = p => { const v = p && p.lastSeen; if (!v) return 0; return typeof v.toMillis === 'function' ? v.toMillis() : (+v || 0); };
+const isOnline = p => !!p && p.online === true && Date.now() - pmillis(p) < ONLINE_MS;
+const rmWait = ms => new Promise(r => setTimeout(r, ms));
+const errLabel = e => { const c = e && e.code; return c === 'permission-denied' ? '権限' : c === 'unavailable' ? '通信' : c === 'not-found' ? '見つからない' : c === 'deadline-exceeded' ? '時間切れ' : '不明'; };
 
-/* 主催者の画面から、共有する席の状態を作る（名前・番号・学級委員の印だけ。タグは共有しない） */
+/* ----- 保存（この端末で入っていたルーム。閉じても、次に開いた時に戻るため） ----- */
+function loadSession() { try { if (!cloud || !cloud.user) return null; const v = JSON.parse(localStorage.getItem(rkey(cloud.user.uid)) || 'null'); return v && v.code ? v : null; } catch (e) { return null; } }
+function saveSession(code, owner) { try { if (cloud && cloud.user) localStorage.setItem(rkey(cloud.user.uid), JSON.stringify({ code, owner: !!owner })); } catch (e) { } }
+function clearSession() { try { if (cloud && cloud.user) localStorage.removeItem(rkey(cloud.user.uid)); } catch (e) { } }
+
+/* ----- 接続の経過（いま何をしているか）----- */
+const PHASE_ICON = { info: 'sync', ok: 'cloud_done', warn: 'sync_problem', err: 'error', off: 'cloud_off' };
+function setPhase(text, kind = 'info') {
+  RM.phase = text; RM.kind = kind;
+  RM.log.push(hhmmss(Date.now()) + '  ' + text);
+  if (RM.log.length > 60) RM.log.shift();
+  refreshConn();
+}
+function refreshConn() {
+  const el = $('#rmConn');
+  const k = RM.session ? (RM.kind || 'info') : (RM.kind && RM.phase ? RM.kind : 'off');
+  const text = RM.phase || (RM.session ? '接続しています' : '接続していません');
+  const last = RM.session && RM.lastRecv ? `（最終受信 ${hhmmss(RM.lastRecv)}）` : '';
+  if (el) { el.className = 'conn ' + k; el.innerHTML = `<span class="ms sm${k === 'info' ? ' spin' : ''}">${PHASE_ICON[k] || 'sync'}</span><span>${esc(text)}${esc(last)}</span>`; }
+  const lg = $('#rmLog'); if (lg) lg.innerHTML = RM.log.slice(-20).map(x => `<div>${esc(x)}</div>`).join('') || '<div class="sub">まだ記録がありません</div>';
+}
+
+/* ----- 席の状態 ----- */
 function boardFromLocal() {
   const res = S.result;
   const cls = cloud && cloud.classes ? cloud.classes.find(c => c.id === cloud.classId) : null;
   return {
-    title: cls ? cls.name : 'クラス',
-    view: S.view,
-    layout: S.layout,
+    title: cls ? cls.name : 'クラス', view: S.view, layout: S.layout,
     members: S.members.map(m => ({ id: m.id, name: m.name, no: m.no, star: m.tags.includes('学級委員'), absent: !!m.absent })),
-    assign: res ? res.assign : null,
-    locked: res ? (res.locked || []) : [],
-    hid: res ? res.hid : null
+    assign: res ? res.assign : null, locked: res ? (res.locked || []) : [], hid: res ? res.hid : null
   };
 }
 function currentBoard() { return RM.owner ? (cloud ? boardFromLocal() : null) : RM.board; }
 
-/* 主催者：席の変更を少し待ってから書き込む */
+/* ----- 再試行つきの操作 ----- */
+async function withRetry(fn, label, tries = 4) {
+  let last = null;
+  for (let i = 0; i < tries; i++) {
+    try { return await fn(); }
+    catch (e) {
+      last = e; dlog(label + ' ' + (e && e.code));
+      if (e && e.code === 'not-found') break;
+      if (i < tries - 1) { setPhase(`${label}を再試行しています（${i + 2}回目）…`, 'warn'); await rmWait(700 * Math.pow(2, i)); }
+    }
+  }
+  throw last;
+}
+
+/* ----- ルームへの参加・作成・退出 ----- */
+async function roomCreate() {
+  if (!cloud || !cloud.user || RM.joining) return;
+  RM.joining = true; const code = genCode(), m = myInfo(), rev = newRev(), { sdk } = cloud;
+  try {
+    setPhase('ルームを作成しています…');
+    await withRetry(() => sdk.setDoc(roomRef(code), { ownerUid: m.uid, ownerName: m.name, editors: 'host', board: JSON.stringify(boardFromLocal()), rev, byRole: 'host', by: RM.cid, createdAt: sdk.serverTimestamp(), updatedAt: sdk.serverTimestamp() }), 'ルーム作成');
+    await withRetry(() => sdk.setDoc(partRef(code, m.uid), { name: m.name, role: 'host', joinedAt: sdk.serverTimestamp(), online: true, lastSeen: sdk.serverTimestamp() }, { merge: true }), '主催者の登録');
+    RM.lastRev = rev; saveSession(code, true);
+    startSession(code, true, null);
+    snack('ルームを作成しました');
+  } catch (e) { setPhase('ルームを作成できませんでした（' + errLabel(e) + '）。通信を確認して、もう一度押してください', 'err'); snack('ルームを作成できませんでした', 4000); }
+  finally { RM.joining = false; }
+}
+/* 参加（手動・自動の両方）：失敗しても保存したコードで自動的に入り直す */
+async function joinRoom(raw, auto = false) {
+  if (!cloud || !cloud.user || RM.joining) return false;
+  const code = normCode(raw);
+  if (code.length !== 8) { if (!auto) snack('ルームコードは8文字です（例: ABCD-2345）', 3500); return false; }
+  RM.joining = true; RM.pendingCode = code; clearTimeout(RM.rejoinTimer);
+  const { sdk } = cloud, m = myInfo();
+  try {
+    setPhase('ルーム ' + fmtCode(code) + ' を確認しています…');
+    const snap = await withRetry(() => sdk.getDoc(roomRef(code)), 'ルームの確認');
+    if (!snap.exists()) {
+      clearSession(); RM.pendingCode = null;
+      setPhase('そのコードのルームはありません（閉じられたか、コードが違います）', 'err');
+      if (!auto) snack('ルームが見つかりません。コードを確認してください', 3500);
+      return false;
+    }
+    const d = snap.data(), owner = d.ownerUid === m.uid;
+    setPhase('参加を登録しています…');
+    await withRetry(() => sdk.setDoc(partRef(code, m.uid), { name: m.name, role: owner ? 'host' : 'guest', joinedAt: sdk.serverTimestamp(), online: true, lastSeen: sdk.serverTimestamp() }, { merge: true }), '参加の登録');
+    RM.pendingCode = null; saveSession(code, owner);
+    startSession(code, owner, d);
+    if (!auto) snack('ルームに参加しました');
+    return true;
+  } catch (e) {
+    // 一時的な失敗：保存したコードを残して、自動で入り直す（閉じて開き直さなくてもよいように）
+    saveSession(code, false);
+    setPhase('参加できませんでした（' + errLabel(e) + '）。自動で入り直します', 'err');
+    scheduleRejoin(code, 12000);
+    if (!auto) snack('参加できませんでした。通信を確認すると、自動で入り直します', 4000);
+    return false;
+  } finally { RM.joining = false; }
+}
+function scheduleRejoin(code, ms) {
+  clearTimeout(RM.rejoinTimer);
+  RM.rejoinTimer = setTimeout(() => { const st = loadSession(); if (!RM.session && st && st.code === code && navigator.onLine !== false) joinRoom(code, true); else if (!RM.session && st && st.code === code) scheduleRejoin(code, ms); }, ms);
+}
+async function roomLeave() {
+  if (!cloud || !cloud.user) return;
+  if (RM.owner && RM.session) { confirmDlg('ルームを閉じます。参加者は入れなくなり、チャットも消えます。よろしいですか？', 'ルームを閉じる', () => roomClose()); return; }
+  const st = loadSession(); const code = RM.code || (st && st.code); const me = cloud.user.uid;
+  stopSession(true); clearSession(); clearTimeout(RM.rejoinTimer); RM.pendingCode = null; RM.pending = [];
+  setPhase('ルームから退出しました', 'off');
+  renderOnline();
+  if (code) { try { await cloud.sdk.deleteDoc(partRef(code, me)); } catch (e) { } }
+  snack('退出しました');
+}
+async function roomClose() {
+  const code = RM.code; if (!code) return;
+  const { sdk } = cloud;
+  stopSession(true); clearSession(); RM.pending = [];
+  setPhase('ルームを閉じています…', 'info'); renderOnline();
+  try {
+    for (const col of [partsCol(code), msgsCol(code)]) {
+      const snap = await withRetry(() => sdk.getDocs(col), 'データの整理');
+      await Promise.all(snap.docs.map(d => sdk.deleteDoc(d.ref)));
+    }
+    await withRetry(() => sdk.deleteDoc(roomRef(code)), 'ルームの削除');
+    setPhase('ルームを閉じました', 'off');
+    snack('ルームを閉じました');
+  } catch (e) { setPhase('ルームの削除に一部失敗しました', 'err'); snack('ルームの削除に一部失敗しました', 4000); }
+  renderOnline();
+}
+
+/* ----- 接続の開始・停止・張り直し ----- */
+function startSession(code, owner, data) {
+  stopSession(false);
+  const s = { code, owner: !!owner, id: ++RM.seq };
+  RM.session = s; RM.code = code; RM.owner = !!owner; RM.gotRoom = false; RM.room = null;
+  RM.board = null; RM.parts = []; RM.msgs = []; RM.lastMirror = null; RM.peer = null; RM.lastSentBoard = null; RM.sel = null;
+  RM.lastRev = owner ? RM.lastRev : null; RM.retry = { room: 0, parts: 0, msgs: 0 }; RM.pending = RM.pending.filter(p => p.state !== 'sent');
+  if (data && data.board && !owner) { try { RM.board = JSON.parse(data.board); } catch (e) { } }
+  setPhase('サーバーとリアルタイムの接続を開いています…');
+  ['room', 'parts', 'msgs'].forEach(k => attach(k));
+  presenceStart();
+  startPoll();
+  if (owner) roomSchedule();
+  renderOnline();
+}
+function stopSession(offline) {
+  if (offline && RM.code) heartbeat(true);
+  clearInterval(RM.hbTimer); clearInterval(RM.tick); clearInterval(RM.pollTimer); RM.hbTimer = null; RM.tick = null; RM.pollTimer = null;
+  Object.keys(RM.unsub).forEach(k => { try { if (RM.unsub[k]) RM.unsub[k](); } catch (e) { } RM.unsub[k] = null; });
+  clearTimeout(RM.pushTimer); clearTimeout(RM.pushRetry); RM.pushTimer = null; RM.pushRetry = null;
+  RM.session = null; RM.code = null; RM.owner = false;
+}
+function attach(kind) {
+  const s = RM.session; if (!s || !cloud) return;
+  try { if (RM.unsub[kind]) RM.unsub[kind](); } catch (e) { }
+  RM.unsub[kind] = null;
+  const { sdk } = cloud;
+  const ref = kind === 'room' ? roomRef(s.code) : kind === 'parts' ? partsCol(s.code) : msgsQ(s.code);
+  try {
+    RM.unsub[kind] = sdk.onSnapshot(ref, snap => {
+      if (RM.session !== s) return;
+      RM.retry[kind] = 0; onData(kind, snap, 'live');
+    }, err => { if (RM.session === s) listenFailed(kind, err, s); });
+  } catch (e) { listenFailed(kind, e, s); }
+}
+function listenFailed(kind, err, s) {
+  const code = err && err.code;
+  dlog(`listen ${kind} ${code}`);
+  RM.unsub[kind] = null;
+  if (code === 'not-found' && kind === 'room') { roomGone(); return; }
+  const n = ++RM.retry[kind];
+  const delay = Math.min(30000, 1000 * Math.pow(2, n - 1));
+  setPhase(`接続が途切れました。${Math.round(delay / 1000)}秒後に自動で再接続します`, 'warn');
+  setTimeout(() => { if (RM.session === s && !RM.unsub[kind]) attach(kind); }, delay);
+}
+function roomGone() {
+  clearSession(); stopSession(false); RM.pending = []; RM.pendingCode = null;
+  setPhase('ルームが閉じられました（主催者が終了しました）', 'err');
+  snack('ルームが閉じられました'); renderOnline();
+}
+/* 定期の取り直し：リアルタイムが止まっていても、一定時間で最新の状態を取る */
+function startPoll() {
+  clearInterval(RM.pollTimer); RM.pollN = 0;
+  RM.pollTimer = setInterval(() => pollOnce('poll'), POLL_MS);
+}
+async function pollOnce(src = 'poll') {
+  const s = RM.session; if (!s || !cloud || navigator.onLine === false) return;
+  const { sdk } = cloud;
+  RM.pollN++;
+  try {
+    const snap = await sdk.getDoc(roomRef(s.code)); if (RM.session !== s) return;
+    if (!snap.exists()) { roomGone(); return; }
+    onData('room', snap, src);
+    const m = await sdk.getDocs(msgsQ(s.code)); if (RM.session !== s) return; onData('msgs', m, src);
+    const p = await sdk.getDocs(partsCol(s.code)); if (RM.session !== s) return; onData('parts', p, src);
+    // 数回ごとに、リアルタイムの受信を張り直す（静かに止まっていても復旧する）
+    if (RM.pollN % 5 === 0) ['room', 'parts', 'msgs'].forEach(k => attach(k));
+    else ['room', 'parts', 'msgs'].forEach(k => { if (!RM.unsub[k]) attach(k); });
+  } catch (e) { dlog('poll ' + (e && e.code)); if (RM.session === s) setPhase('最新の状態を取れませんでした。自動で再試行します', 'warn'); }
+}
+/* 画面に戻った・通信が戻った時は、すぐに取り直す */
+function onWake(why) {
+  if (!cloud || !cloud.user) return;
+  const now = Date.now(); if (now - RM.lastWake < 1500) return; RM.lastWake = now;
+  if (RM.session) {
+    heartbeat(false); pollOnce(why);
+    ['room', 'parts', 'msgs'].forEach(k => { if (!RM.unsub[k]) attach(k); });
+  } else {
+    const st = loadSession();
+    if (st && !RM.joining) joinRoom(st.code, true);
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) { if (RM.code) heartbeat(true); } else onWake('画面に戻った'); });
+window.addEventListener('online', () => { onWake('通信が戻った'); if (cloud && cloud.user && cloud.dirty) pushNow(); });
+window.addEventListener('focus', () => onWake('フォーカス'));
+window.addEventListener('pagehide', () => { if (RM.code) heartbeat(true); });
+window.addEventListener('offline', () => { if (RM.session) setPhase('通信が切れています。戻ると自動で再接続します', 'warn'); });
+
+/* ----- データを受け取ったとき ----- */
+function onData(kind, snap, src) {
+  RM.lastRecv = Date.now();
+  if (kind === 'room') {
+    if (!snap.exists()) { roomGone(); return; }
+    if (!RM.gotRoom) { RM.gotRoom = true; setPhase(src === 'live' ? '席の情報を受信しました。変更はリアルタイムで届きます' : '最新の席を取得しました', 'ok'); }
+    applyRoomDoc(snap.data());
+  } else if (kind === 'parts') {
+    RM.parts = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    refreshOnline();
+  } else if (kind === 'msgs') {
+    RM.msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    RM.pending = RM.pending.filter(p => !RM.msgs.some(m => m.cid === p.cid));
+    renderChat();
+  }
+  refreshConn();
+}
+function applyRoomDoc(d) {
+  RM.room = d;
+  if (d.board && d.rev !== RM.lastRev) {
+    let b = null; try { b = JSON.parse(d.board); } catch (e) { b = null; }
+    if (b) {
+      RM.lastRev = d.rev;
+      if (RM.owner) { if (d.byRole === 'guest' && d.by !== RM.cid) applyProposal(b); }
+      else { RM.board = b; setPhase('席が更新されました（' + hhmm(Date.now()) + '）', 'ok'); }
+    }
+  }
+  if (!RM.owner && d.board && !RM.board) { try { RM.board = JSON.parse(d.board); } catch (e) { } }
+  refreshOnline();
+}
+
+/* ----- 席の同期（主催者：保存を確実にする／参加者：提案） ----- */
 function roomSchedule() {
-  if (!RM.code || !RM.owner) return;
-  clearTimeout(RM.pushTimer);
-  RM.pushTimer = setTimeout(roomPush, 350);
+  if (!RM.session || !RM.owner) return;
+  RM.dirty = true;
+  clearTimeout(RM.pushTimer); RM.pushTimer = setTimeout(roomPush, 350);
   if (S.page === 'online') refreshOnline();
 }
 async function roomPush() {
   RM.pushTimer = null;
-  if (!RM.code || !RM.owner || !cloud) return;
-  const rev = newRev(); RM.lastRev = rev;
+  const s = RM.session; if (!s || !RM.owner || !cloud) return;
+  const rev = newRev(); RM.lastRev = rev; RM.dirty = false;
+  setPhase('席の変更を送っています…');
   try {
-    await cloud.sdk.updateDoc(roomRef(RM.code), { board: JSON.stringify(boardFromLocal()), rev, byRole: 'host', by: RM.cid, updatedAt: cloud.sdk.serverTimestamp() });
-  } catch (e) { dlog('room push ' + (e && e.code)); snack('ルームへの反映に失敗しました', 3500); }
+    await cloud.sdk.updateDoc(roomRef(s.code), { board: JSON.stringify(boardFromLocal()), rev, byRole: 'host', by: RM.cid, updatedAt: cloud.sdk.serverTimestamp() });
+    if (RM.session === s) setPhase('サーバーに保存しました（' + hhmmss(Date.now()) + '）', 'ok');
+  } catch (e) {
+    dlog('room push ' + (e && e.code));
+    if (RM.session !== s) return;
+    RM.dirty = true; setPhase('送れませんでした。数秒後に自動で再送します', 'warn');
+    clearTimeout(RM.pushRetry); RM.pushRetry = setTimeout(roomPush, 4000);
+  }
 }
-/* 参加者：席の入れ替えを提案（主催者の画面に取り込まれる） */
 async function roomPropose(assign) {
+  const s = RM.session; if (!s) return;
   const rev = newRev();
   const prev = RM.room && RM.room.board ? JSON.parse(RM.room.board) : RM.board;
   const b = { ...RM.board, assign };
   RM.lastRev = rev; RM.board = b;
   refreshOnline();
+  setPhase('入れ替えの提案を送っています…');
   try {
-    await cloud.sdk.updateDoc(roomRef(RM.code), { board: JSON.stringify(b), rev, byRole: 'guest', by: RM.cid, updatedAt: cloud.sdk.serverTimestamp() });
+    await cloud.sdk.updateDoc(roomRef(s.code), { board: JSON.stringify(b), rev, byRole: 'guest', by: RM.cid, updatedAt: cloud.sdk.serverTimestamp() });
+    setPhase('提案を送りました。主催者の画面に反映されます', 'ok');
   } catch (e) {
     dlog('propose ' + (e && e.code));
     RM.board = prev; RM.lastRev = null; refreshOnline();
+    setPhase('提案を送れませんでした。通信を確認して、もう一度お試しください', 'err');
     snack('席の変更を送れませんでした。主催者が「参加者も席を入れ替えられる」をオンにしているか確認してください', 4500);
   }
 }
@@ -2294,21 +2630,61 @@ function applyProposal(b) {
   pushUndo(); res.assign = next; sel = null; afterEdit();
   snack('参加者が席を入れ替えました');
 }
-/* 受信：ルームの状態が変わったとき */
-function roomOnRoom(snap) {
-  if (!RM.code) return;
-  if (!snap.exists()) { snack('ルームが閉じられました'); roomDetach(true); renderOnline(); return; }
-  const d = snap.data(); RM.room = d;
-  if (d.board && d.rev !== RM.lastRev) {
-    const b = JSON.parse(d.board); RM.lastRev = d.rev;
-    if (RM.owner) { if (d.byRole === 'guest' && d.by !== RM.cid) applyProposal(b); }
-    else RM.board = b;
+
+/* ----- 在席：30秒ごとに「オンライン」と、見ている席を送る ----- */
+function presenceStart() {
+  clearInterval(RM.hbTimer); clearInterval(RM.tick);
+  heartbeat(false);
+  RM.hbTimer = setInterval(() => heartbeat(false), HB_MS);
+  RM.tick = setInterval(() => { if (S.page === 'online') refreshOnline(); }, 15000);
+}
+function presenceStop(offline) { clearInterval(RM.hbTimer); clearInterval(RM.tick); RM.hbTimer = null; RM.tick = null; if (offline) heartbeat(true); }
+async function heartbeat(offline) {
+  const s = RM.session; if (!s || !cloud || !cloud.user) return;
+  const me = cloud.user.uid;
+  const data = { online: !offline, lastSeen: cloud.sdk.serverTimestamp() };
+  const b = currentBoard(); const js = b ? JSON.stringify(b) : null;
+  if (js && js !== RM.lastSentBoard) data.lastBoard = js;
+  try {
+    await cloud.sdk.updateDoc(partRef(s.code, me), data);
+    if (data.lastBoard) RM.lastSentBoard = js;
+  } catch (e) {
+    dlog('hb ' + (e && e.code));
+    if (RM.session === s && !offline) setPhase('在席の情報を送れませんでした。自動で再試行します', 'warn');
   }
-  if (!RM.owner && d.board && !RM.board) RM.board = JSON.parse(d.board);
-  refreshOnline();
 }
 
-/* 席の表示（参加者の画面・主催者のオンライン画面で共通） */
+/* ----- チャット：送った瞬間に表示し、送信状態を出す（失敗したら再送できる） ----- */
+async function roomSend(raw) {
+  const t = String(raw || '').trim().slice(0, 300); const s = RM.session;
+  if (!t || !s) return;
+  const m = myInfo(), cid = newRev();
+  RM.pending.push({ cid, uid: m.uid, name: m.name, text: t, ts: Date.now(), state: 'sending' });
+  renderChat();
+  await sendPending(cid, s);
+}
+async function sendPending(cid, s) {
+  const p = RM.pending.find(x => x.cid === cid); if (!p || !s) return;
+  p.state = 'sending'; renderChat();
+  try {
+    await cloud.sdk.addDoc(msgsCol(s.code), { uid: p.uid, name: p.name, text: p.text, cid, ts: cloud.sdk.serverTimestamp() });
+    p.state = 'sent';
+  } catch (e) { dlog('msg ' + (e && e.code)); p.state = 'failed'; }
+  renderChat();
+}
+function renderChat() {
+  const box = $('#rmMsgs'); if (!box) return;
+  const uidMe = cloud && cloud.user ? cloud.user.uid : '';
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const items = RM.msgs.map(m => ({ key: m.id, uid: m.uid, name: m.name, text: m.text, ms: pmillis(m) || Date.now(), st: '' }))
+    .concat(RM.pending.filter(p => !RM.msgs.some(m => m.cid === p.cid)).map(p => ({ key: p.cid, cid: p.cid, uid: p.uid, name: p.name, text: p.text, ms: p.ts, st: p.state })));
+  items.sort((a, b) => a.ms - b.ms);
+  box.innerHTML = items.length ? items.map(x => `<div class="cmsg ${x.uid === uidMe ? 'me' : ''} ${x.st === 'failed' ? 'failed' : ''}"><div class="who">${esc(x.name || '')} <span class="mt">${hhmm(x.ms)}</span></div><div>${esc(x.text || '')}</div>${x.st === 'sending' ? '<div class="mst">送信中…</div>' : x.st === 'failed' ? `<div class="mst">送れませんでした <button class="btn text sm" data-retry-msg="${esc(x.cid)}">もう一度送る</button></div>` : ''}</div>`).join('')
+    : '<div class="sub" style="text-align:center;margin:auto">まだメッセージはありません</div>';
+  if (atBottom || items.some(x => x.st === 'sending')) box.scrollTop = box.scrollHeight;
+}
+
+/* ----- 席の表示（参加者の画面・主催者のオンライン画面で共通） ----- */
 function mirrorHTML(b) {
   if (!b || !b.layout || !b.layout.cells) return '<div class="empty-state"><span class="ms">hourglass_top</span><div>読み込み中…</div></div>';
   const L = b.layout, nums = {}; let n = 0;
@@ -2328,29 +2704,42 @@ function mirrorHTML(b) {
   const nfs = S.settings && S.settings.nameSize ? S.settings.nameSize : 15;
   return `${notYet}${L.teacher && b.view !== 'student' ? teacher : ''}<div class="board-wrap"><div class="board res" style="grid-template-columns:repeat(${L.cols},var(--cw));--cols:${L.cols};--nfs:${nfs}px">${cells}</div></div>${L.teacher && b.view === 'student' ? `<div style="margin-top:12px">${teacher}</div>` : ''}`;
 }
-
-/* 画面の部分更新（チャットの入力欄を消さないように、中身だけ差し替える） */
 function refreshOnline() {
-  if (S.page !== 'online' || !$('#rmBoard')) return;
+  if (S.page !== 'online' || !$('#rmBoard')) { refreshConn(); return; }
   const uidMe = cloud && cloud.user ? cloud.user.uid : '';
-  // 座席表は中身が変わったときだけ描き直す（チャット更新でタップが途切れないように）
   const mh = mirrorHTML(currentBoard() || null);
   if (mh !== RM.lastMirror) { $('#rmBoard').innerHTML = mh; RM.lastMirror = mh; }
   $('#rmCount').textContent = RM.parts.length;
-  $('#rmParts').innerHTML = RM.parts.map(p => `<div class="hist"><span class="ms ${p.role === 'host' ? 'fill' : ''}">${p.role === 'host' ? 'workspace_premium' : 'person'}</span><div class="grow">${esc(p.name || '参加者')}${p.uid === uidMe ? ' <span class="sub">（あなた）</span>' : ''}</div><span class="chip tag">${p.role === 'host' ? '主催' : '参加'}</span></div>`).join('') || '<div class="sub">まだ参加者がいません</div>';
-  const box = $('#rmMsgs');
-  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-  box.innerHTML = RM.msgs.map(m => `<div class="cmsg ${m.uid === uidMe ? 'me' : ''}"><div class="who">${esc(m.name || '')}</div><div>${esc(m.text || '')}</div></div>`).join('') || '<div class="sub" style="text-align:center;margin:auto">まだメッセージはありません</div>';
-  if (atBottom) box.scrollTop = box.scrollHeight;
+  $('#rmOnline').textContent = RM.parts.filter(isOnline).length;
+  const sorted = [...RM.parts].sort((a, b) => (isOnline(b) - isOnline(a)) || String(a.name || '').localeCompare(String(b.name || ''), 'ja'));
+  $('#rmParts').innerHTML = sorted.map(p => {
+    const on = isOnline(p), me = p.uid === uidMe, t = pmillis(p);
+    const st = on ? 'オンライン' : (t ? `オフライン・最終 ${hhmm(t)}` : 'オフライン');
+    return `<button class="prow ${on ? 'on' : 'off'} ${RM.peer === p.uid ? 'sel' : ''}" data-peer="${esc(p.uid)}"><span class="pdot"></span><span class="grow"><b>${esc(p.name || '参加者')}</b>${me ? ' <span class="sub">（あなた）</span>' : ''}<span class="sub" style="display:block">${st}</span></span><span class="chip tag">${p.role === 'host' ? '主催' : '参加'}</span></button>`;
+  }).join('') || '<div class="sub">まだ参加者がいません</div>';
+  peerRefresh();
+  renderChat();
   const ed = $('#rmEditors'); if (ed && RM.room) ed.checked = RM.room.editors === 'all';
   $('#rmHint').textContent = RM.owner
     ? '席の変更は「席替え」画面でも、ここの席を2つタップしても行えます。変更は参加者の画面にすぐ反映されます。'
     : (RM.room && RM.room.editors === 'all' ? '席を2つタップすると、入れ替えを主催者に提案できます。' : '主催者が席を変更すると、ここに自動で反映されます。');
+  refreshConn();
 }
-
-/* 席のタップ：主催者は直接入れ替え、参加者（編集可のとき）は提案 */
+function peerRefresh() {
+  const host = $('#rmPeer'); if (!host) return;
+  const p = RM.peer ? RM.parts.find(x => x.uid === RM.peer) : null;
+  if (!p) { host.innerHTML = ''; return; }
+  const on = isOnline(p), t = pmillis(p);
+  let b = null; try { b = p.lastBoard ? JSON.parse(p.lastBoard) : null; } catch (e) { b = null; }
+  const title = on ? `${esc(p.name || '参加者')}さんの今の席（オンライン）` : `${esc(p.name || '参加者')}さんが最後にオンラインだった時の席（${t ? hhmm(t) : '時刻不明'}）`;
+  host.innerHTML = `<section class="card stack peer">
+    <div class="card-head"><span class="step-no"><span class="ms sm">${on ? 'wifi' : 'history'}</span></span><div class="grow"><b>${title}</b>${on ? '' : '<div class="sub">オフラインのため、その時に見ていた席を表示しています。</div>'}</div><button class="icon-btn" id="peerClose" title="閉じる"><span class="ms">close</span></button></div>
+    ${b ? `<div>${mirrorHTML(b)}</div>` : '<div class="sub">まだ席の記録がありません（一度もオンラインになっていない、または古い版で参加した場合）。</div>'}
+  </section>`;
+  $('#peerClose').onclick = () => { RM.peer = null; refreshOnline(); };
+}
 function onMirrorTap(i) {
-  if (!RM.code) return;
+  if (!RM.session) return;
   if (RM.owner) {
     if (!S.result) { snack('先に席替えを実行してください'); return; }
     if (RM.sel == null) { RM.sel = i; refreshOnline(); return; }
@@ -2372,106 +2761,18 @@ function onMirrorTap(i) {
   assign[a] = y; assign[i] = x;
   roomPropose(assign);
 }
-
-/* ----- ルームの作成・参加・退出 ----- */
-async function roomCreate() {
-  if (!cloud || !cloud.user) return;
-  const code = genCode(), m = myInfo(), rev = newRev(), { sdk } = cloud;
-  try {
-    await sdk.setDoc(roomRef(code), { ownerUid: m.uid, ownerName: m.name, editors: 'host', board: JSON.stringify(boardFromLocal()), rev, byRole: 'host', by: RM.cid, createdAt: sdk.serverTimestamp(), updatedAt: sdk.serverTimestamp() });
-    await sdk.setDoc(partRef(code, m.uid), { name: m.name, role: 'host', joinedAt: sdk.serverTimestamp() });
-  } catch (e) { dlog('create ' + (e && e.code)); snack('ルームを作成できませんでした', 4000); return; }
-  RM.lastRev = rev;
-  await roomAttach(code, true);
-  snack('ルームを作成しました');
-}
-async function roomJoin(raw) {
-  if (!cloud || !cloud.user) return;
-  const code = normCode(raw);
-  if (code.length !== 8) { snack('ルームコードは8文字です（例: ABCD-2345）', 3500); return; }
-  const { sdk } = cloud, m = myInfo();
-  try {
-    const snap = await sdk.getDoc(roomRef(code));
-    if (!snap.exists()) { snack('ルームが見つかりません。コードを確認してください', 3500); return; }
-    const owner = snap.data().ownerUid === m.uid;
-    await sdk.setDoc(partRef(code, m.uid), { name: m.name, role: owner ? 'host' : 'guest', joinedAt: sdk.serverTimestamp() });
-    await roomAttach(code, owner);
-    snack('ルームに参加しました');
-  } catch (e) {
-    dlog('join ' + (e && e.code));
-    snack(e && e.code === 'permission-denied' ? 'このルームには参加できません' : 'ルームに参加できませんでした', 4000);
-  }
-}
-async function roomAttach(code, owner) {
-  roomDetach(false);
-  RM.code = code; RM.owner = owner; RM.sel = null; RM.room = null; RM.board = null; RM.parts = []; RM.msgs = []; RM.lastMirror = null;
-  try { localStorage.setItem(rkey(cloud.user.uid), JSON.stringify({ code, owner })); } catch (e) { }
-  const { sdk } = cloud;
-  const denied = e => {
-    dlog('room ' + (e && e.code));
-    if (e && e.code === 'permission-denied') { snack('このルームにはアクセスできません', 4000); roomDetach(true); renderOnline(); }
-  };
-  RM.unsub = [
-    sdk.onSnapshot(roomRef(code), roomOnRoom, denied),
-    sdk.onSnapshot(partsCol(code), snap => { RM.parts = snap.docs.map(d => ({ uid: d.id, ...d.data() })); refreshOnline(); }, denied),
-    sdk.onSnapshot(sdk.query(msgsCol(code), sdk.orderBy('ts'), sdk.limitToLast(100)), snap => { RM.msgs = snap.docs.map(d => d.data()); refreshOnline(); }, denied)
-  ];
-  renderOnline();
-  if (owner) roomSchedule();
-}
-function roomDetach(clearKey) {
-  (RM.unsub || []).forEach(f => { try { f(); } catch (e) { } });
-  RM.unsub = [];
-  clearTimeout(RM.pushTimer); RM.pushTimer = null;
-  if (clearKey && cloud && cloud.user) { try { localStorage.removeItem(rkey(cloud.user.uid)); } catch (e) { } }
-  RM.code = null; RM.owner = false; RM.room = null; RM.board = null; RM.parts = []; RM.msgs = []; RM.sel = null;
-}
-async function roomLeave() {
-  if (!RM.code) return;
-  if (RM.owner) { confirmDlg('ルームを閉じます。参加者は入れなくなり、チャットも消えます。よろしいですか？', 'ルームを閉じる', () => roomClose()); return; }
-  const code = RM.code, me = cloud.user.uid;
-  roomDetach(true); renderOnline();
-  try { await cloud.sdk.deleteDoc(partRef(code, me)); } catch (e) { }
-  snack('退出しました');
-}
-async function roomClose() {
-  const code = RM.code; if (!code) return;
-  const { sdk } = cloud;
-  roomDetach(true); renderOnline();
-  try {
-    for (const col of [partsCol(code), msgsCol(code)]) {
-      const snap = await sdk.getDocs(col);
-      await Promise.all(snap.docs.map(d => sdk.deleteDoc(d.ref)));
-    }
-    await sdk.deleteDoc(roomRef(code));
-    snack('ルームを閉じました');
-  } catch (e) { dlog('close ' + (e && e.code)); snack('ルームの削除に一部失敗しました', 4000); }
-}
 async function roomSetEditors(on) {
-  if (!RM.owner || !RM.code) return;
+  const s = RM.session; if (!RM.owner || !s) return;
   try {
-    await cloud.sdk.updateDoc(roomRef(RM.code), { editors: on ? 'all' : 'host', updatedAt: cloud.sdk.serverTimestamp() });
+    await cloud.sdk.updateDoc(roomRef(s.code), { editors: on ? 'all' : 'host', updatedAt: cloud.sdk.serverTimestamp() });
     snack(on ? '参加者も席を入れ替えられます' : '参加者は見るだけになりました');
   } catch (e) { snack('設定を変更できませんでした', 3000); }
 }
-async function roomSend(raw) {
-  const t = String(raw || '').trim().slice(0, 300);
-  if (!t || !RM.code) return;
-  const m = myInfo();
-  try { await cloud.sdk.addDoc(msgsCol(RM.code), { uid: m.uid, name: m.name, text: t, ts: cloud.sdk.serverTimestamp() }); }
-  catch (e) { dlog('msg ' + (e && e.code)); snack('送信できませんでした', 3000); const i = $('#rmIn'); if (i) i.value = t; }
-}
-/* ログイン直後：前回入っていたルームに自動で戻る */
+/* ログイン直後・画面を開いた時：前回のルームに自動で戻る */
 async function roomResume() {
-  if (!cloud || !cloud.user || RM.code) { if (S.page === 'online') renderOnline(); return; }
-  let v = null;
-  try { v = JSON.parse(localStorage.getItem(rkey(cloud.user.uid)) || 'null'); } catch (e) { }
-  if (!v || !v.code) { if (S.page === 'online') renderOnline(); return; }
-  try {
-    const snap = await cloud.sdk.getDoc(roomRef(v.code));
-    if (!snap.exists()) { localStorage.removeItem(rkey(cloud.user.uid)); }
-    else await roomAttach(v.code, snap.data().ownerUid === cloud.user.uid);
-  } catch (e) { dlog('resume ' + (e && e.code)); }
+  if (!cloud || !cloud.user || RM.session) { if (S.page === 'online') renderOnline(); return; }
+  const st = loadSession();
+  if (st && !RM.joining) { setPhase('前に参加していたルーム ' + fmtCode(st.code) + ' に戻っています…'); await joinRoom(st.code, true); }
   if (S.page === 'online') renderOnline();
 }
 
@@ -2488,9 +2789,10 @@ function renderOnline() {
     const b = $('#rmLogin'); if (b) b.onclick = () => fbLogin();
     return;
   }
-  if (!RM.code) {
+  if (!RM.session) {
     el.innerHTML = `
     <div class="h-row"><h2>オンライン</h2><span class="sub">コードで同じ座席表を共有できます</span></div>
+    <div id="rmConn" class="conn off"></div>
     <div class="grid2">
       <div class="card stack"><h3><span class="ms">add_circle</span>ルームを作る（主催）</h3>
         <div class="sub">席替えの結果が、参加者の画面にリアルタイムで表示されます。チャットもできます。</div>
@@ -2501,38 +2803,77 @@ function renderOnline() {
     </div>
     <div class="banner info" style="margin-top:16px"><span class="ms">lock</span><div>ルームのコードを知っている人は、<b>座席と名前</b>、チャットの内容を見られます。学校の個人情報のルールに従い、知らない人にコードを教えないでください。</div></div>`;
     $('#rmCreate').onclick = roomCreate;
-    $('#rmJoin').onclick = () => roomJoin($('#rmCodeIn').value);
-    $('#rmCodeIn').onkeydown = e => { if (e.key === 'Enter') roomJoin(e.target.value); };
+    $('#rmJoin').onclick = () => joinRoom($('#rmCodeIn').value, false);
+    $('#rmCodeIn').onkeydown = e => { if (e.key === 'Enter') joinRoom(e.target.value, false); };
+    refreshConn();
     return;
   }
   el.innerHTML = `
-  <div class="h-row"><h2>オンライン</h2><span class="sub">ルーム <b class="rmcode">${esc(fmtCode(RM.code))}</b> ／ 参加中 <b id="rmCount">0</b>名</span><span class="grow"></span>
+  <div class="h-row"><h2>オンライン</h2><span class="sub">ルーム <b class="rmcode">${esc(fmtCode(RM.code))}</b></span><span class="grow"></span>
     <button class="btn outlined sm" id="rmCopy"><span class="ms">content_copy</span>コードをコピー</button>
+    <button class="btn outlined sm" id="rmRefresh"><span class="ms">refresh</span>今すぐ更新</button>
     <button class="btn text sm danger" id="rmLeave"><span class="ms">${RM.owner ? 'delete' : 'logout'}</span>${RM.owner ? 'ルームを閉じる' : '退出'}</button></div>
+  <div id="rmConn" class="conn info"></div>
   <div class="mem-layout">
     <div class="stack">
       <div class="card" id="rmCard">
-        <div class="row" style="margin-bottom:8px"><span class="sub grow" id="rmHint"></span><button class="icon-btn" id="rmFs" title="全画面で表示"><span class="ms">fullscreen</span></button></div>
+        <div class="row" style="margin-bottom:8px"><span class="sub grow" id="rmHint"></span><button class="icon-btn" id="rmFs" title="投影表示（全画面・席だけ）"><span class="ms">cast</span></button></div>
         <div id="rmBoard"></div>
       </div>
+      <div id="rmPeer" class="stack"></div>
     </div>
     <div class="stack">
       ${RM.owner ? '<div class="card"><label class="switch"><input type="checkbox" id="rmEditors"><span class="grow">参加者も席を入れ替えられる<div class="sub">オフのときは、参加者は見るだけです</div></span></label></div>' : ''}
-      <div class="card stack"><h3><span class="ms">group</span>参加者</h3><div id="rmParts" class="stack" style="gap:6px"></div></div>
+      <div class="card stack"><h3><span class="ms">group</span>参加者 <span class="sub">オンライン <b id="rmOnline">0</b> ／ 全 <b id="rmCount">0</b>名</span></h3>
+        <div class="sub">名前を選ぶと、その人の今の席（オンラインの人）または最後にオンラインだった時の席が表示されます。</div>
+        <div id="rmParts" class="stack" style="gap:6px"></div></div>
       <div class="card stack"><h3><span class="ms">forum</span>チャット</h3>
         <div id="rmMsgs" class="chatbox"></div>
         <form id="rmForm" class="row" style="flex-wrap:nowrap;align-items:flex-end"><label class="field grow"><span>メッセージ</span><input id="rmIn" maxlength="300" autocomplete="off"></label><button class="btn filled sm" type="submit"><span class="ms">send</span>送信</button></form>
       </div>
+      <details class="card acc"><summary class="sum"><span class="ms">terminal</span>接続の詳細（いまの処理の記録）<span class="ms chev">expand_more</span></summary>
+        <div id="rmLog" class="log"></div></details>
     </div>
   </div>`;
   $('#rmCopy').onclick = () => copyText(RM.code, 'ルームコードをコピーしました');
+  $('#rmRefresh').onclick = () => { setPhase('手動で最新の状態を取得しています…'); pollOnce('手動'); ['room', 'parts', 'msgs'].forEach(k => attach(k)); };
   $('#rmLeave').onclick = roomLeave;
   const ed = $('#rmEditors'); if (ed) ed.onchange = e => roomSetEditors(e.target.checked);
-  $('#rmFs').onclick = () => { const c = $('#rmCard'); if (c.requestFullscreen) c.requestFullscreen().catch(() => snack('全画面にできませんでした', 3000)); };
+  $('#rmFs').onclick = openPresent;
   $('#rmBoard').onclick = e => { const c = e.target.closest && e.target.closest('[data-oi]'); if (c) onMirrorTap(+c.dataset.oi); };
+  $('#rmParts').onclick = e => { const b = e.target.closest && e.target.closest('[data-peer]'); if (!b) return; RM.peer = RM.peer === b.dataset.peer ? null : b.dataset.peer; refreshOnline(); };
+  $('#rmMsgs').onclick = e => { const b = e.target.closest && e.target.closest('[data-retry-msg]'); if (b) sendPending(b.dataset.retryMsg, RM.session); };
   $('#rmForm').onsubmit = e => { e.preventDefault(); const v = $('#rmIn').value; $('#rmIn').value = ''; roomSend(v); };
   refreshOnline();
 }
+
+
+/* ===== インストール案内（iPhone・iPadのSafariで、ホーム画面への追加を控えめに案内） ===== */
+function initInstallTip() {
+  const ua = navigator.userAgent || '';
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  if (standalone) return;
+  let dismissed = 0; try { dismissed = +localStorage.getItem('sekigae.pwa.dismissed') || 0; } catch (e) { }
+  if (dismissed && Date.now() - dismissed < 30 * 864e5) return;
+  const iosLike = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/.test(ua);
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; show(); });
+  if (iosLike && safari) setTimeout(show, 3000);
+  function show() {
+    if (document.getElementById('pwaTip') || !$('#main')) return;
+    const t = document.createElement('div'); t.id = 'pwaTip'; t.className = 'pwa-tip';
+    const text = iosLike && safari
+      ? 'ホーム画面に追加すると、アプリのように開けます。Safariの <b>共有</b> ボタン <span class="ms sm">ios_share</span> から「ホーム画面に追加」を選んでください。'
+      : 'ホーム画面に追加すると、アプリとして開けます。';
+    t.innerHTML = `<span class="ms sm">install_mobile</span><span class="pwa-txt">${text}</span>${deferred ? '<button class="btn tonal sm" id="pwaGo">追加</button>' : ''}<button class="icon-btn" id="pwaX" aria-label="閉じる"><span class="ms sm">close</span></button>`;
+    $('#main').prepend(t);
+    $('#pwaX').onclick = () => { try { localStorage.setItem('sekigae.pwa.dismissed', String(Date.now())); } catch (e) { } t.remove(); };
+    const go = $('#pwaGo'); if (go) go.onclick = async () => { try { deferred.prompt(); await deferred.userChoice; } catch (e) { } t.remove(); };
+  }
+}
+setTimeout(initInstallTip, 1200);
+
 
 /* ===== init ===== */
 (function init() {
@@ -2709,14 +3050,14 @@ async function onUser(user) {
   const need = needLogin(); clearTimeout(cloud.authTimer);
   if (!user && cloud.signing) return;
   cloud.signing = false;
-  if (!user) { setHint(false); cloud.user = null; cloudDetach(); roomDetach(false); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
+  if (!user) { setHint(false); cloud.user = null; cloudDetach(); stopSession(false); setStatus('off'); if (need) gate('login', cloud.redirectErr ? authMsg(cloud.redirectErr) : ''); return; }
   const allow = (FB.allowedEmails || []).map(s => s.toLowerCase());
   if (allow.length && !allow.includes((user.email || '').toLowerCase())) { const em = user.email; await cloud.sdk.signOut(cloud.auth); setHint(false); gate('login', `このアカウント（${em}）は利用を許可されていません。`); return; }
   if (cloud.user && cloud.user.uid === user.uid) return;
   if (guest()) { try { const cur = localStorage.getItem(LS); if (cur) localStorage.setItem('sekigae.guest.backup', cur); localStorage.removeItem('sekigae.guest'); } catch (e) { } }
   setHint(true); cloud.user = user;
-  try { if (need && document.documentElement.classList.contains('gated')) gate('loading', 'データを読み込んでいます…'); await loadClasses(); ungate(); setStatus('ok'); roomResume(); }
-  catch (e) { console.error(e); dlog('load err ' + (e && (e.code || e.message))); setStatus('err'); if (need && !document.documentElement.classList.contains('gated') && hasHint()) snack('オフラインか通信エラーのため、この端末のデータで動いています', 5000); else if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
+  try { if (need && document.documentElement.classList.contains('gated')) gate('loading', 'データを読み込んでいます…'); await loadClassesRetry(); ungate(); setStatus('ok'); roomResume(); }
+  catch (e) { console.error(e); dlog('load err ' + (e && (e.code || e.message))); setStatus('err'); setTimeout(() => roomResume(), 1500); if (need && !document.documentElement.classList.contains('gated') && hasHint()) snack('オフラインか通信エラーのため、この端末のデータで動いています', 5000); else if (need) gate('retry', 'データを読み込めませんでした。Firestoreのルールと設定を確認してください。'); else snack('データを読み込めませんでした'); }
 }
 
 
@@ -2834,6 +3175,13 @@ async function loadClasses() {
   let want = null; try { want = localStorage.getItem('sekigae.cls.' + cloud.user.uid); } catch (e) { }
   await openClass(cloud.classes.find(c => c.id === want) ? want : cloud.classes[0].id);
 }
+/* 名簿の読み込みは、一時的な通信エラーなら自動で再試行する（ログイン直後に止まらないように） */
+async function loadClassesRetry() {
+  for (let t = 0; ; t++) {
+    try { return await loadClasses(); }
+    catch (e) { dlog('loadClasses ' + (e && e.code)); if (t >= 3) throw e; await new Promise(r => setTimeout(r, 1000 * (t + 1))); }
+  }
+}
 async function openClass(id) {
   const { sdk, db } = cloud; cloudDetach(); cloud.classId = id; try { localStorage.setItem('sekigae.cls.' + cloud.user.uid, id); } catch (e) { }
   const other = localOwnedByOther();
@@ -2841,11 +3189,7 @@ async function openClass(id) {
   if (snap.exists()) { const d = snap.data(); cloud.lastRev = d.rev; applyRemote(d, false); }
   else if (other) { S = normalizeState(emptyClassState()); _save(); }
   setLocalOwner();
-  cloud.unsub = sdk.onSnapshot(ref, s => {
-    if (!s.exists() || s.metadata.hasPendingWrites) return; const d = s.data();
-    if (d.rev === cloud.lastRev || d.rev === cloud.nextRev) return;
-    cloud.lastRev = d.rev; applyRemote(d, true);
-  });
+  attachClass(id); startClassPoll();
   const cl = cloud.classes.find(c => c.id === id); const h = $('#topbar h1 span:last-child'); if (h) h.textContent = cl ? `席替えスタジオ・${cl.name}` : '席替えスタジオ';
 }
 /* この端末のデータの持ち主（別のアカウントのデータを新しいクラスに送らないため） */
@@ -2857,13 +3201,51 @@ function applyRemote(d, announce) {
   _save(); roomSchedule(); clearTimers(); hiddenSet.clear(); undoStack = []; redoStack = []; sel = null; lastFail = null; renderPage(S.page);
   if (announce) snack('他の端末の変更を反映しました'); cloud.applying = false;
 }
-function cloudDetach() { if (cloud && cloud.unsub) { cloud.unsub(); cloud.unsub = null; } if (cloud) clearTimeout(cloud.timer); }
-function cloudSchedule() { if (!cloud || !cloud.user || !cloud.classId || cloud.applying) return; setStatus('sync'); clearTimeout(cloud.timer); cloud.timer = setTimeout(pushNow, 1500); }
+function cloudDetach() { if (!cloud) return; cloud.attachTok = (cloud.attachTok || 0) + 1; if (cloud.unsub) { try { cloud.unsub(); } catch (e) { } cloud.unsub = null; } clearTimeout(cloud.timer); clearTimeout(cloud.retryTimer); clearInterval(cloud.poll); }
+function cloudSchedule() { if (cloud) cloud.dirty = true; if (!cloud || !cloud.user || !cloud.classId || cloud.applying) return; setStatus('sync'); clearTimeout(cloud.timer); cloud.timer = setTimeout(pushNow, 1500); }
+function attachClass(id) {
+  const { sdk, db } = cloud; const tok = cloud.attachTok = (cloud.attachTok || 0) + 1;
+  try { if (cloud.unsub) cloud.unsub(); } catch (e) { }
+  cloud.unsub = null;
+  const ref = sdk.doc(db, cpath(), id);
+  try {
+    cloud.unsub = sdk.onSnapshot(ref, s => {
+      if (cloud.attachTok !== tok) return; cloud.retryN = 0; cloud.liveAt = Date.now();
+      if (!s.exists() || (s.metadata && s.metadata.hasPendingWrites)) return;
+      const d = s.data(); if (d.rev === cloud.lastRev || d.rev === cloud.nextRev) return;
+      cloud.lastRev = d.rev; applyRemote(d, true);
+    }, err => {
+      if (cloud.attachTok !== tok) return; dlog('class listen ' + (err && err.code)); cloud.unsub = null;
+      cloud.retryN = (cloud.retryN || 0) + 1; const delay = Math.min(30000, 1500 * Math.pow(2, cloud.retryN - 1));
+      setTimeout(() => { if (cloud.attachTok === tok && cloud.classId === id) attachClass(id); }, delay);
+    });
+  } catch (e) { cloud.unsub = null; }
+}
+function startClassPoll() { clearInterval(cloud.poll); cloud.poll = setInterval(classPoll, 15000); }
+async function classPoll() {
+  if (!cloud || !cloud.user || !cloud.classId || cloud.timer || cloud.dirty || navigator.onLine === false) return;
+  try {
+    const snap = await cloud.sdk.getDoc(cloud.sdk.doc(cloud.db, cpath(), cloud.classId));
+    if (snap.exists()) { const d = snap.data(); if (d.rev !== cloud.lastRev && d.rev !== cloud.nextRev) { cloud.lastRev = d.rev; applyRemote(d, true); } }
+  } catch (e) { dlog('class poll ' + (e && e.code)); }
+  if (!cloud.unsub && cloud.classId) attachClass(cloud.classId);
+}
+/* 保存：失敗したら自動で再送する（保存できていないまま閉じないように） */
 async function pushNow() {
   if (!cloud || !cloud.user || !cloud.classId) return; clearTimeout(cloud.timer);
-  try { const { sdk, db } = cloud; const data = pack(); cloud.lastRev = data.rev; await sdk.setDoc(sdk.doc(db, cpath(), cloud.classId), data); cloud.lastSync = Date.now(); setStatus('ok'); }
-  catch (e) { console.error(e); setStatus('err'); snack('クラウドに保存できませんでした。通信状況を確認してください', 4000); }
+  cloud.dirty = false;
+  try {
+    const { sdk, db } = cloud; const data = pack(); cloud.lastRev = data.rev;
+    await sdk.setDoc(sdk.doc(db, cpath(), cloud.classId), data);
+    cloud.lastSync = Date.now(); cloud.errShown = false; clearTimeout(cloud.retryTimer); setStatus('ok');
+  } catch (e) {
+    console.error(e); dlog('class save ' + (e && e.code));
+    cloud.dirty = true; setStatus('err');
+    if (!cloud.errShown) { cloud.errShown = true; snack('クラウドに保存できませんでした。通信が戻ると自動で再送します', 4500); }
+    clearTimeout(cloud.retryTimer); cloud.retryTimer = setTimeout(pushNow, 5000);
+  }
 }
+
 function emptyClassState() { const s = defaultState(); s.members = []; s.rules = []; s.layout = makeLayout('plain', 5, 6); s.sample = false; s.history = []; s.result = null; return s; }
 function accountDialog() {
   if (!cloud) return;
